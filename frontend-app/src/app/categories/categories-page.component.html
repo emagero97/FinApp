@@ -1,0 +1,154 @@
+<div class="page">
+  <header class="page-header">
+    <h1>Categories</h1>
+    <button type="button" class="btn btn-primary" (click)="openCreate()">New category</button>
+  </header>
+
+  <div class="toolbar">
+    <input
+      class="search"
+      type="search"
+      placeholder="Search categories…"
+      [value]="search()"
+      (input)="search.set($any($event.target).value); load()"
+    />
+    <select
+      class="filter"
+      [value]="typeFilter()"
+      (change)="typeFilter.set($any($event.target).value); load()"
+    >
+      <option value="">All types</option>
+      <option value="income">Income</option>
+      <option value="expense">Expense</option>
+    </select>
+    <select
+      class="filter"
+      [value]="statusFilter()"
+      (change)="statusFilter.set($any($event.target).value); load()"
+    >
+      <option value="">All statuses</option>
+      <option value="enabled">Enabled</option>
+      <option value="disabled">Disabled</option>
+    </select>
+    <select
+      class="filter"
+      [value]="sortBy()"
+      (change)="sortBy.set($any($event.target).value); load()"
+    >
+      <option value="name">Sort: name</option>
+      <option value="type">Sort: type</option>
+      <option value="status">Sort: status</option>
+      <option value="transaction_count">Sort: transactions</option>
+      <option value="display_order">Sort: display order</option>
+    </select>
+    <button type="button" class="btn btn-icon" (click)="sortDir.set(sortDir() === 'asc' ? 'desc' : 'asc'); load()">
+      {{ sortDir() === 'asc' ? '▲' : '▼' }}
+    </button>
+  </div>
+
+  @if (loading()) {
+    <p class="muted">Loading…</p>
+  } @else if (categories().length === 0) {
+    <p class="muted">No categories found.</p>
+  } @else {
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th class="num">Transactions</th>
+          <th class="num">Total amount</th>
+          <th>Last transaction</th>
+          <th class="actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (category of categories(); track category.id) {
+          <tr [class.row-disabled]="category.status === 'disabled'">
+            <td>
+              <span
+                class="color-dot"
+                [style.background]="category.color || 'var(--border, #cbd2d9)'"
+              ></span>
+              {{ category.name }}
+              @if (category.icon) {
+                <span class="muted"> {{ category.icon }}</span>
+              }
+            </td>
+            <td>
+              <span class="badge" [class.badge-income]="category.type === 'income'">
+                {{ category.type === 'income' ? 'Income' : 'Expense' }}
+              </span>
+            </td>
+            <td>
+              <span class="badge" [class.badge-disabled]="category.status === 'disabled'">
+                {{ category.status === 'enabled' ? 'Enabled' : 'Disabled' }}
+              </span>
+            </td>
+            <td class="num">{{ category.transaction_count }}</td>
+            <td class="num">{{ formatAmount(category.total_amount) }}</td>
+            <td>{{ formatDate(category.last_transaction_date) }}</td>
+            <td class="actions">
+              <button type="button" class="btn btn-sm" (click)="openEdit(category)">Edit</button>
+              <button
+                type="button"
+                class="btn btn-sm"
+                (click)="toggleStatus(category)"
+              >
+                {{ category.status === 'enabled' ? 'Disable' : 'Enable' }}
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-danger"
+                [disabled]="category.transaction_count > 0"
+                title="{{
+                  category.transaction_count > 0
+                    ? 'Cannot delete a category with linked transactions'
+                    : 'Delete permanently'
+                }}"
+                (click)="requestDelete(category)"
+              >
+                Delete
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>
+
+@if (showForm()) {
+  <app-category-form
+    [category]="editing()"
+    (saved)="onSaved()"
+    (closed)="closeForm()"
+  ></app-category-form>
+}
+
+@if (confirmState(); as confirm) {
+  <app-confirm-dialog
+    [title]="confirm.title"
+    [message]="confirm.message"
+    [confirmLabel]="confirm.confirmLabel"
+    [dangerous]="confirm.dangerous"
+    (confirmed)="runConfirm()"
+    (dismissed)="closeConfirm()"
+  ></app-confirm-dialog>
+}
+
+@if (blockedDelete(); as category) {
+  <app-confirm-dialog
+    title="Category cannot be deleted"
+    [message]="
+      'This category cannot be deleted because it is associated with ' +
+      category.transaction_count +
+      ' transactions. You can disable it to prevent it from being used for new transactions.'
+    "
+    confirmLabel="OK"
+    [dangerous]="false"
+    (confirmed)="closeConfirm()"
+    (dismissed)="closeConfirm()"
+  ></app-confirm-dialog>
+}

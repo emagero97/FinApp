@@ -1,0 +1,161 @@
+<div class="page">
+  <header class="page-header">
+    <div>
+      <h1>Dashboard</h1>
+      <p class="muted">Your money situation, day by day.</p>
+    </div>
+    <div class="period-toggle">
+      @for (key of periodKeys; track key) {
+        <button
+          type="button"
+          class="period-btn"
+          [class.active]="period() === key"
+          (click)="setPeriod(key)"
+        >
+          {{ key.charAt(0).toUpperCase() + key.slice(1) }}
+        </button>
+      }
+    </div>
+  </header>
+
+  @if (loading()) {
+    <p class="muted">Loading dashboard…</p>
+  } @else {
+    <section class="kpi-row">
+      <div class="kpi">
+        <span class="kpi-label">Balance</span>
+        <span class="kpi-value">{{ formatMoney(kpis().balance) }}</span>
+      </div>
+      <div class="kpi kpi-income">
+        <span class="kpi-label">Income</span>
+        <span class="kpi-value">+{{ formatMoney(kpis().income) }}</span>
+      </div>
+      <div class="kpi kpi-expense">
+        <span class="kpi-label">Expenses</span>
+        <span class="kpi-value">−{{ formatMoney(kpis().expenses) }}</span>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>Spending by category</h2>
+        <p class="muted">This month</p>
+        @if (pieSegments().length === 0) {
+          <p class="muted empty">No expenses recorded this month.</p>
+        } @else {
+          <div class="donut-wrap">
+            <svg viewBox="0 0 100 100" class="donut">
+              @for (seg of pieSegments(); track seg.name) {
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  fill="none"
+                  [attr.stroke]="seg.color"
+                  stroke-width="18"
+                  [attr.stroke-dasharray]="dashArray(seg)"
+                  [attr.stroke-dashoffset]="dashOffset(seg)"
+                  transform="rotate(-90 50 50)"
+                ></circle>
+              }
+            </svg>
+            <div class="donut-center">
+              <span class="donut-total">{{ formatMoney(totalExpenses()) }}</span>
+              <span class="donut-caption">total spent</span>
+            </div>
+          </div>
+          <ul class="legend">
+            @for (seg of pieSegments(); track seg.name) {
+              <li class="legend-item">
+                <span class="legend-dot" [style.background]="seg.color"></span>
+                <span class="legend-name">{{ seg.name }}</span>
+                <span class="legend-value">{{ formatMoney(seg.total) }}</span>
+                <span class="legend-pct">{{ seg.pct.toFixed(1) }}%</span>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+
+      <div class="card">
+        <h2>Categories vs monthly average</h2>
+        <p class="muted">This month compared to your historical monthly average</p>
+        @if (summary()?.category_comparison?.length === 0) {
+          <p class="muted empty">No expense history yet.</p>
+        } @else {
+          <div class="cmp-list">
+            @for (item of summary()?.category_comparison; track item.category_id) {
+              <div class="cmp-row">
+                <div class="cmp-label">{{ item.name }}</div>
+                <div class="cmp-track">
+                  <div
+                    class="cmp-current"
+                    [style.width.%]="pctOfComparison(item.current)"
+                    [style.background]="item.color || 'var(--primary)'"
+                  ></div>
+                  <div
+                    class="cmp-average"
+                    [style.left.%]="pctOfComparison(item.average)"
+                    [title]="'Average ' + formatMoney(item.average)"
+                  ></div>
+                </div>
+                <div class="cmp-status" [class.over]="item.above_average" [class.under]="!item.above_average">
+                  @if (item.above_average) {
+                    over by {{ formatMoney(item.difference) }}
+                  } @else {
+                    {{ formatMoney(absMoney(item.difference)) }} below avg
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="card">
+        <h2>This month vs previous years</h2>
+        <p class="muted">Total expenses in {{ monthName() }} across the years</p>
+        @if (monthBars().length === 0) {
+          <p class="muted empty">No data.</p>
+        } @else {
+          <div class="bars-container">
+            @if (monthAverage() !== null) {
+              <div class="avg-line" [style.bottom.%]="(monthAverage()! / monthMax()) * 100">
+                <span class="avg-line-label">avg {{ formatMoney(monthAverage()!) }}</span>
+              </div>
+            }
+            <div class="bars">
+              @for (bar of monthBars(); track bar.label) {
+                <div class="bar-col">
+                  <div class="bar-value">{{ formatMoney(bar.value) }}</div>
+                  <div class="bar" [class.bar-current]="bar.isCurrent" [style.height.%]="(bar.value / monthMax()) * 100"></div>
+                  <div class="bar-label">{{ bar.label }}</div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="card">
+        <h2>Last 12 months</h2>
+        <p class="muted">Monthly expenses trend</p>
+        @if (historyBars().length === 0) {
+          <p class="muted empty">No data.</p>
+        } @else {
+          <div class="bars-container">
+            <div class="bars">
+              @for (bar of historyBars(); track bar.label) {
+                <div class="bar-col">
+                  <div class="bar-value">{{ formatMoney(bar.value) }}</div>
+                  <div class="bar" [class.bar-current]="bar.isCurrent" [style.height.%]="(bar.value / historyMax()) * 100"></div>
+                  <div class="bar-label">{{ bar.label }}</div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+  }
+</div>

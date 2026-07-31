@@ -1,0 +1,19 @@
+<div class="overlay">
+  <div class="dialog" role="dialog" aria-modal="true">
+    <h2 class="dialog-title">{{ title() }}</h2>
+    @if (message()) {
+      <p class="dialog-message">{{ message() }}</p>
+    }
+    <div class="dialog-actions">
+      <button type="button" class="btn" (click)="dismissed.emit()">{{ cancelLabel() }}</button>
+      <button
+        type="button"
+        class="btn btn-danger"
+        [class.btn-danger]="dangerous()"
+        (click)="confirmed.emit()"
+      >
+        {{ confirmLabel() }}
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,144 @@
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+.shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface, #1e293b);
+  border-right: 1px solid var(--border, #334155);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  transition: width 0.2s ease;
+  overflow: hidden;
+}
+
+.sidebar-collapsed .sidebar {
+  width: 68px;
+}
+
+.sidebar-header {
+  padding: 1rem 0.9rem;
+  border-bottom: 1px solid var(--border, #334155);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+  color: var(--text, #e2e8f0);
+  font-weight: 700;
+  font-size: 1.05rem;
+  white-space: nowrap;
+}
+
+.brand-icon {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--primary, #818cf8), var(--primary-dark, #6366f1));
+  color: #fff;
+}
+
+.brand-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.75rem 0.5rem;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  color: var(--text-muted, #94a3b8);
+  text-decoration: none;
+  white-space: nowrap;
+  font-size: 0.92rem;
+}
+
+.nav-link:hover {
+  background: var(--surface-raised, #334155);
+  color: var(--text, #e2e8f0);
+}
+
+.nav-link.active {
+  background: var(--primary-soft, rgb(129 140 248 / 14%));
+  color: var(--primary, #818cf8);
+  font-weight: 600;
+}
+
+.nav-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.sidebar-footer {
+  padding: 0.75rem 0.5rem;
+  border-top: 1px solid var(--border, #334155);
+}
+
+.collapse-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.8rem;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #94a3b8);
+  cursor: pointer;
+  border-radius: 8px;
+  font-size: 0.92rem;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.collapse-btn:hover {
+  background: var(--surface-raised, #334155);
+  color: var(--text, #e2e8f0);
+}
+
+.sidebar-collapsed .nav-link,
+.sidebar-collapsed .collapse-btn {
+  justify-content: center;
+  padding: 0.6rem 0.4rem;
+}
+
+.sidebar-collapsed .brand {
+  justify-content: center;
+}
+
+.sidebar-collapsed .brand-text,
+.sidebar-collapsed .nav-label {
+  display: none;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}

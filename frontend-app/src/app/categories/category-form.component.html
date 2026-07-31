@@ -1,0 +1,71 @@
+<div class="overlay">
+  <form class="form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <h2 class="form-title">{{ category() ? 'Edit category' : 'New category' }}</h2>
+
+    <label class="field">
+      <span class="label">Name *</span>
+      <input formControlName="name" type="text" placeholder="e.g. Groceries" />
+      @if (form.controls.name.invalid && (form.controls.name.dirty || form.controls.name.touched)) {
+        <span class="hint error">Name is required and cannot be blank</span>
+      }
+    </label>
+
+    <label class="field">
+      <span class="label">Transaction type *</span>
+      <select formControlName="type" [disabled]="typeLocked">
+        <option value="expense">Expense</option>
+        <option value="income">Income</option>
+      </select>
+      @if (typeLocked) {
+        <span class="hint">
+          Type cannot change because this category is linked to transactions.
+        </span>
+      }
+    </label>
+
+    <fieldset class="field">
+      <span class="label">Status *</span>
+      <div class="radio-row">
+        <label class="radio">
+          <input type="radio" formControlName="status" value="enabled" />
+          <span>Enabled</span>
+        </label>
+        <label class="radio">
+          <input type="radio" formControlName="status" value="disabled" />
+          <span>Disabled</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <div class="grid">
+      <label class="field">
+        <span class="label">Icon</span>
+        <input formControlName="icon" type="text" placeholder="Optional" />
+      </label>
+      <label class="field">
+        <span class="label">Color</span>
+        <input formControlName="color" type="text" placeholder="Optional" />
+      </label>
+      <label class="field">
+        <span class="label">Display order</span>
+        <input formControlName="display_order" type="number" />
+      </label>
+    </div>
+
+    <label class="field">
+      <span class="label">Description</span>
+      <textarea formControlName="description" rows="2" placeholder="Optional"></textarea>
+    </label>
+
+    @if (error()) {
+      <p class="form-error">{{ error() }}</p>
+    }
+
+    <div class="form-actions">
+      <button type="button" class="btn" (click)="closed.emit()">Cancel</button>
+      <button type="submit" class="btn btn-primary" [disabled]="form.invalid || saving()">
+        {{ saving() ? 'Saving…' : 'Save' }}
+      </button>
+    </div>
+  </form>
+</div>

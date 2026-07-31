@@ -1,4 +1,4 @@
-## Dashboard (done? y/n)
+## Dashboard (done? y)
 
 The dashboard should provide a quick overview of financial performance for the week, month, and year.
 
@@ -15,7 +15,7 @@ A pie chart should also be implemented to show how each category contributed to 
 
 In addition, another chart should compare the amount spent in a given month with the average spending for the same month in previous years.
 
-## Data Entry (done? y/n)
+## Data Entry (done? y)
 
 The data-entry form should include:
 
@@ -116,7 +116,7 @@ The export operation must not modify, delete, or alter any existing transaction 
 
 ---
 
-## Category Management (done? y/n)
+## Category Management (done? y)
 
 The application must provide a category management feature that allows users to create, configure, enable, and disable transaction categories.
 

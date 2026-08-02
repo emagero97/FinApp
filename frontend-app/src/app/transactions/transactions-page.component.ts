@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Category } from '../models/category';
-import { Transaction, TransactionType } from '../models/transaction';
+import { Transaction, TransactionQuery, TransactionType } from '../models/transaction';
 import { CategoryService } from '../services/category.service';
 import { TransactionService } from '../services/transaction.service';
 import { SettingsService } from '../services/settings.service';
@@ -30,6 +30,11 @@ export class TransactionsPageComponent {
   saving = signal(false);
   error = signal<string | null>(null);
   deleteTarget = signal<Transaction | null>(null);
+  searchQuery = signal('');
+  filterType = signal<string>('');
+  filterCategory = signal<number | null>(null);
+  filterDateFrom = signal('');
+  filterDateTo = signal('');
 
   readonly form = new FormGroup({
     type: new FormControl<TransactionType>('expense', [Validators.required]),
@@ -62,7 +67,24 @@ export class TransactionsPageComponent {
 
   load(): void {
     this.loading.set(true);
-    this.transactionService.list().subscribe({
+    const query: TransactionQuery = {};
+    const search = this.searchQuery().trim();
+    if (this.filterType()) {
+      query.type = this.filterType() as TransactionType;
+    }
+    if (this.filterCategory() != null) {
+      query.category_id = this.filterCategory()!;
+    }
+    if (this.filterDateFrom()) {
+      query.date_from = this.filterDateFrom();
+    }
+    if (this.filterDateTo()) {
+      query.date_to = this.filterDateTo();
+    }
+    if (search) {
+      query.search = search;
+    }
+    this.transactionService.list(query).subscribe({
       next: (res) => this.transactions.set(res.transactions),
       error: () => this.transactions.set([]),
       complete: () => this.loading.set(false),
@@ -137,6 +159,25 @@ export class TransactionsPageComponent {
     this.deleteTarget.set(transaction);
   }
 
+  clearFilters(): void {
+    this.searchQuery.set('');
+    this.filterType.set('');
+    this.filterCategory.set(null);
+    this.filterDateFrom.set('');
+    this.filterDateTo.set('');
+    this.load();
+  }
+
+  hasFilters(): boolean {
+    return !!(
+      this.searchQuery() ||
+      this.filterType() ||
+      this.filterCategory() != null ||
+      this.filterDateFrom() ||
+      this.filterDateTo()
+    );
+  }
+
   confirmDelete(): void {
     const target = this.deleteTarget();
     if (!target) {
@@ -148,6 +189,10 @@ export class TransactionsPageComponent {
 
   formatAmount(value: string): string {
     return Number(value).toFixed(2);
+  }
+
+  parseCategoryId(value: string): number | null {
+    return value === '' ? null : Number(value);
   }
 
   t(key: string, params?: Record<string, string | number>): string {

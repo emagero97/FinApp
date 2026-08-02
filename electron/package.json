@@ -1,0 +1,43 @@
+{
+  "name": "finapp-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FinApp desktop app (Angular SPA + Flask backend inside Electron)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:backend": "..\\venv\\Scripts\\python -m PyInstaller --onefile --name finapp-backend --paths .. --distpath backend-dist --workpath backend-build --specpath build --clean backend_entry.py",
+    "pack": "npm run build:backend && electron-builder --dir",
+    "dist": "npm run build:backend && electron-builder"
+  },
+  "build": {
+    "appId": "com.finapp.desktop",
+    "productName": "FinApp",
+    "files": [
+      "main.js",
+      "preload.js",
+      "desktop-server.js",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../frontend-app/dist/frontend-app/browser",
+        "to": "browser"
+      },
+      {
+        "from": "backend-dist/finapp-backend.exe",
+        "to": "backend/finapp-backend.exe"
+      }
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "dir"
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  }
+}

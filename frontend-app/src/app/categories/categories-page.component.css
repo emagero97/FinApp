@@ -77,7 +77,7 @@
   opacity: 0.55;
 }
 
-.child-row td {
+.child-row td:first-child {
   padding-left: 1.75rem;
 }
 

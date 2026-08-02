@@ -186,6 +186,22 @@ def test_list_transactions_with_filters(client, expense_category, income_categor
     assert res.get_json()["total"] == 1
 
 
+def test_list_search_matches_amount_and_category(client, expense_category):
+    _create(client, category_id=expense_category, amount=42.50)
+    _create(client, category_id=expense_category, amount=7.30, notes="lunch", date="2026-07-02")
+
+    res = client.get("/api/transactions?search=grocer")
+    assert res.get_json()["total"] == 2
+
+    res = client.get("/api/transactions?search=42.5")
+    assert res.get_json()["total"] == 1
+    assert res.get_json()["transactions"][0]["amount"] == "42.50"
+
+    res = client.get("/api/transactions?search=lunch")
+    assert res.get_json()["total"] == 1
+    assert res.get_json()["transactions"][0]["notes"] == "lunch"
+
+
 def test_list_default_sorted_by_date_desc(client, expense_category):
     _create(client, category_id=expense_category, date="2026-07-01")
     _create(client, category_id=expense_category, date="2026-07-20")

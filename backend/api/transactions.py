@@ -1,7 +1,7 @@
 from datetime import date, datetime
 
 from flask import Blueprint, jsonify, request
-from sqlalchemy import func, or_
+from sqlalchemy import String, cast, func, or_
 
 from ..extensions import db
 from ..models import Category, Transaction
@@ -135,7 +135,13 @@ def list_transactions():
         query = query.filter(Transaction.date <= parsed_to)
     if search:
         like = f"%{search.lower()}%"
-        query = query.filter(func.lower(Transaction.notes).like(like))
+        query = query.filter(
+            or_(
+                func.lower(func.coalesce(Transaction.notes, "")).like(like),
+                cast(Transaction.amount, String).like(like),
+                func.lower(Category.name).like(like),
+            )
+        )
 
     sort_column = {
         "date": Transaction.date,

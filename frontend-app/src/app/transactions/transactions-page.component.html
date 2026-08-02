@@ -70,6 +70,61 @@
     </div>
   </form>
 
+  <section class="filters">
+    <input
+      class="search"
+      type="search"
+      placeholder="{{ t('tx.searchPlaceholder') }}"
+      [value]="searchQuery()"
+      (input)="searchQuery.set($any($event.target).value); load()"
+    />
+    <select
+      class="filter"
+      [value]="filterType()"
+      (change)="filterType.set($any($event.target).value); load()"
+    >
+      <option value="">{{ t('tx.allTypes') }}</option>
+      <option value="income">{{ t('cat.income') }}</option>
+      <option value="expense">{{ t('cat.expense') }}</option>
+    </select>
+    <select
+      class="filter"
+      [value]="filterCategory()"
+      (change)="
+        filterCategory.set(parseCategoryId($any($event.target).value));
+        load()
+      "
+    >
+      <option [ngValue]="null">{{ t('tx.allCategories') }}</option>
+      @for (category of categories(); track category.id) {
+        <option [ngValue]="category.id">{{ category.name }}</option>
+      }
+    </select>
+    <label class="filter-field">
+      <span>{{ t('tx.from') }}</span>
+      <input
+        class="filter-date"
+        type="date"
+        [value]="filterDateFrom()"
+        (change)="filterDateFrom.set($any($event.target).value); load()"
+      />
+    </label>
+    <label class="filter-field">
+      <span>{{ t('tx.to') }}</span>
+      <input
+        class="filter-date"
+        type="date"
+        [value]="filterDateTo()"
+        (change)="filterDateTo.set($any($event.target).value); load()"
+      />
+    </label>
+    @if (hasFilters()) {
+      <button type="button" class="btn btn-sm btn-clear" (click)="clearFilters()">
+        {{ t('tx.clearFilters') }}
+      </button>
+    }
+  </section>
+
   <section class="list">
     @if (loading()) {
       <p class="muted">{{ t('tx.loading') }}</p>

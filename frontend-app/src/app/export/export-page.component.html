@@ -1,0 +1,186 @@
+<div class="page">
+  <header class="page-header">
+    <h1>{{ t('export.header') }}</h1>
+    <span class="muted">{{ t('export.tagline') }}</span>
+  </header>
+
+  <section class="panel">
+    <div class="panel-group">
+      <span class="group-title">{{ t('export.period') }}</span>
+      <div class="radio-row">
+        <label class="radio">
+          <input type="radio" [value]="'ALL'" [checked]="period() === 'ALL'" (change)="period.set('ALL'); onPeriodChange()" />
+          <span>{{ t('export.periodAll') }}</span>
+        </label>
+        <label class="radio">
+          <input type="radio" [value]="'YEAR'" [checked]="period() === 'YEAR'" (change)="period.set('YEAR'); onPeriodChange()" />
+          <span>{{ t('export.periodYear') }}</span>
+        </label>
+        <label class="radio">
+          <input type="radio" [value]="'MONTH'" [checked]="period() === 'MONTH'" (change)="period.set('MONTH'); onPeriodChange()" />
+          <span>{{ t('export.periodMonth') }}</span>
+        </label>
+        <label class="radio">
+          <input type="radio" [value]="'MONTHS'" [checked]="period() === 'MONTHS'" (change)="period.set('MONTHS'); onPeriodChange()" />
+          <span>{{ t('export.periodMonths') }}</span>
+        </label>
+        <label class="radio">
+          <input type="radio" [value]="'CUSTOM'" [checked]="period() === 'CUSTOM'" (change)="period.set('CUSTOM'); onPeriodChange()" />
+          <span>{{ t('export.periodCustom') }}</span>
+        </label>
+      </div>
+
+      @if (period() === 'YEAR') {
+        <label class="field field-inline">
+          <span class="label">{{ t('export.year') }}</span>
+          <input type="number" min="2000" max="2100" [value]="year()" (change)="setYear($any($event.target).value)" />
+        </label>
+      }
+
+      @if (period() === 'MONTH') {
+        <label class="field field-inline">
+          <span class="label">{{ t('export.month') }}</span>
+          <input type="month" [value]="selectedMonth()" (change)="selectedMonth.set($any($event.target).value); refreshPreview()" />
+        </label>
+      }
+
+      @if (period() === 'MONTHS') {
+        <div class="months">
+          <span class="label">{{ t('export.multiMonths') }}</span>
+          <div class="month-grid">
+            @for (month of recentMonths(); track month) {
+              <label class="checkbox">
+                <input type="checkbox" [value]="month" [checked]="isSelectedMonth(month)" (change)="toggleMonth($event)" />
+                <span>{{ formatMonth(month) }}</span>
+              </label>
+            }
+          </div>
+        </div>
+      }
+
+      @if (period() === 'CUSTOM') {
+        <div class="range">
+          <label class="field">
+            <span class="label">{{ t('export.customFrom') }}</span>
+            <input type="date" [value]="customFrom()" (change)="customFrom.set($any($event.target).value); refreshPreview()" />
+          </label>
+          <label class="field">
+            <span class="label">{{ t('export.customTo') }}</span>
+            <input type="date" [value]="customTo()" (change)="customTo.set($any($event.target).value); refreshPreview()" />
+          </label>
+        </div>
+        @if (customRangeInvalid()) {
+          <p class="form-error">{{ t('export.customInvalid') }}</p>
+        }
+      }
+    </div>
+
+    <div class="panel-group">
+      <span class="group-title">{{ t('export.type') }}</span>
+      <div class="radio-row">
+        <label class="radio">
+          <input type="radio" [value]="'both'" [checked]="type() === 'both'" (change)="type.set('both'); refreshPreview()" />
+          <span>{{ t('export.typeBoth') }}</span>
+        </label>
+        <label class="radio">
+          <input type="radio" [value]="'income'" [checked]="type() === 'income'" (change)="type.set('income'); refreshPreview()" />
+          <span>{{ t('export.typeIncome') }}</span>
+        </label>
+        <label class="radio">
+          <input type="radio" [value]="'expense'" [checked]="type() === 'expense'" (change)="type.set('expense'); refreshPreview()" />
+          <span>{{ t('export.typeExpense') }}</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="panel-group">
+      <div class="group-row">
+        <span class="group-title">{{ t('export.categories') }}</span>
+        <div class="inline-actions">
+          <button type="button" class="btn btn-sm" (click)="toggleAllIncluded()">
+            {{ allIncluded() ? t('export.allSelected') : t('export.selectAll') }}
+          </button>
+          <button type="button" class="btn btn-sm" (click)="toggleAllExcluded()">
+            {{ t('export.selectNone') }}
+          </button>
+        </div>
+      </div>
+
+      <div class="category-list">
+        @for (category of categories(); track category.id) {
+          <label class="checkbox">
+            <input
+              type="checkbox"
+              [checked]="included().has(category.id)"
+              (change)="toggleCategory(category)"
+            />
+            <span>
+              {{ category.name }}
+              @if (category.status === 'disabled') {
+                <em class="disabled-tag">({{ t('export.disabled') }})</em>
+              }
+            </span>
+          </label>
+        }
+        @if (categories().length === 0) {
+          <span class="muted">{{ t('export.noCategories') }}</span>
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="panel summary">
+    <h2>{{ t('export.summary') }}</h2>
+    <dl class="summary-grid">
+      <div>
+        <dt>{{ t('export.sumPeriod') }}</dt>
+        <dd>{{ periodSummary() }}</dd>
+      </div>
+      <div>
+        <dt>{{ t('export.sumType') }}</dt>
+        <dd>{{ typeSummary() }}</dd>
+      </div>
+      <div>
+        <dt>{{ t('export.sumIncluded') }}</dt>
+        <dd>{{ included().size }} / {{ categories().length }}</dd>
+      </div>
+      <div>
+        <dt>{{ t('export.sumExcluded') }}</dt>
+        <dd>
+          @if (excludedCategories().length === 0) {
+            {{ t('export.none') }}
+          } @else {
+            {{ excludedCategories().map((category) => category.name).join(', ') }}
+          }
+        </dd>
+      </div>
+      <div>
+        <dt>{{ t('export.sumRows') }}</dt>
+        <dd class="rows">
+          @if (loadingPreview()) {
+            {{ t('export.loading') }}
+          } @else if (preview() !== null) {
+            {{ preview() }}
+          } @else {
+            {{ t('export.none') }}
+          }
+        </dd>
+      </div>
+    </dl>
+    @if (preview() === 0) {
+      <p class="form-error">{{ t('export.noMatching') }}</p>
+    }
+    @if (error()) {
+      <p class="form-error">{{ error() }}</p>
+    }
+    @if (success()) {
+      <p class="form-success">{{ t(success()!) }}</p>
+    }
+  </section>
+
+  <div class="actions">
+    <button type="button" class="btn btn-primary" [disabled]="downloading() || loadingPreview() || preview() === 0 || preview() === null || customRangeInvalid()" (click)="download()">
+      {{ downloading() ? t('export.downloading') : t('export.generate') }}
+    </button>
+  </div>
+</div>

@@ -26,7 +26,7 @@ The data-entry form should include:
 
 
 
-## Export (done? y/n)
+## Export (done? y)
 
 The application must provide an export feature that allows users to extract financial transaction data according to a configurable set of filters.
 

@@ -1,14 +1,22 @@
+import os
 import sqlite3
 from pathlib import Path
 
 from flask import Flask, jsonify
 from flask_cors import CORS
 
-from .api import categories_bp, dashboard_bp, transactions_bp
+from .api import categories_bp, dashboard_bp, export_bp, transactions_bp
 from .extensions import db
 from .seed import seed_default_categories
 
 BASE_DIR = Path(__file__).resolve().parent
+
+
+def _default_db_path() -> str:
+    db_path = os.environ.get("FINAPP_DB_PATH")
+    if db_path:
+        return db_path
+    return str(BASE_DIR / "finapp.db")
 
 
 def _migrate_schema(app) -> None:
@@ -27,8 +35,11 @@ def _migrate_schema(app) -> None:
 
 
 def create_app(config: dict | None = None) -> Flask:
+    db_path = Path(_default_db_path())
+    if str(db_path) != ":memory:":
+        db_path.parent.mkdir(parents=True, exist_ok=True)
     app = Flask(__name__)
-    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{BASE_DIR / 'finapp.db'}"
+    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SEED_DEFAULT_CATEGORIES"] = True
     if config:
@@ -40,6 +51,7 @@ def create_app(config: dict | None = None) -> Flask:
     app.register_blueprint(categories_bp)
     app.register_blueprint(transactions_bp)
     app.register_blueprint(dashboard_bp)
+    app.register_blueprint(export_bp)
 
     @app.get("/api/health")
     def health():
@@ -57,4 +69,6 @@ def create_app(config: dict | None = None) -> Flask:
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get("PORT", "5000"))
+    debug = os.environ.get("FINAPP_DEBUG", "1") == "1"
+    app.run(debug=debug, port=port)

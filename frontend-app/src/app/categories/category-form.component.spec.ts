@@ -71,4 +71,25 @@ describe('CategoryFormComponent', () => {
     fixture.detectChanges();
     expect(component.error()).toContain('already exists');
   });
+
+  it('should submit a subcategory with a parent', () => {
+    const fixture = TestBed.createComponent(CategoryFormComponent);
+    const component = fixture.componentInstance;
+    fixture.componentRef.setInput('parentOptions', [
+      { id: 5, name: 'Food' } as unknown as Category,
+    ]);
+    fixture.detectChanges();
+
+    component.form.patchValue({
+      name: 'Groceries',
+      type: 'expense',
+      status: 'enabled',
+      parent_id: 5,
+    });
+    component.submit();
+
+    expect(service.create).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Groceries', type: 'expense', parent_id: 5 })
+    );
+  });
 });

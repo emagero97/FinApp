@@ -1,60 +1,75 @@
 <div class="overlay">
   <form class="form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-    <h2 class="form-title">{{ category() ? 'Edit category' : 'New category' }}</h2>
+    <h2 class="form-title">{{ category() ? t('cat.edit') : t('cat.new') }}</h2>
 
     <label class="field">
-      <span class="label">Name *</span>
-      <input formControlName="name" type="text" placeholder="e.g. Groceries" />
+      <span class="label">{{ t('cat.name') }} *</span>
+      <input formControlName="name" type="text" placeholder="{{ t('cat.name') }}" />
       @if (form.controls.name.invalid && (form.controls.name.dirty || form.controls.name.touched)) {
-        <span class="hint error">Name is required and cannot be blank</span>
+        <span class="hint error">{{ t('cat.nameRequired') }}</span>
       }
     </label>
 
     <label class="field">
-      <span class="label">Transaction type *</span>
-      <select formControlName="type" [disabled]="typeLocked">
-        <option value="expense">Expense</option>
-        <option value="income">Income</option>
+      <span class="label">{{ t('cat.type') }}</span>
+      <select formControlName="type" [disabled]="typeLocked" (change)="typeChanged()">
+        <option value="expense">{{ t('cat.expense') }}</option>
+        <option value="income">{{ t('cat.income') }}</option>
       </select>
       @if (typeLocked) {
         <span class="hint">
-          Type cannot change because this category is linked to transactions.
+          {{ t('cat.typeLocked') }}
         </span>
       }
     </label>
 
+    @if (showParentField) {
+      <label class="field">
+        <span class="label">{{ t('cat.parent') }}</span>
+        <select formControlName="parent_id" [disabled]="parentLocked">
+          <option [ngValue]="null">{{ t('cat.none') }}</option>
+          @for (parent of eligibleParents(); track parent.id) {
+            <option [ngValue]="parent.id">{{ parent.name }}</option>
+          }
+        </select>
+        @if (parentLocked) {
+          <span class="hint">{{ t('cat.parentLocked') }}</span>
+        }
+      </label>
+    }
+
     <fieldset class="field">
-      <span class="label">Status *</span>
+      <span class="label">{{ t('cat.status') }}</span>
       <div class="radio-row">
         <label class="radio">
           <input type="radio" formControlName="status" value="enabled" />
-          <span>Enabled</span>
+          <span>{{ t('cat.enabled') }}</span>
         </label>
         <label class="radio">
           <input type="radio" formControlName="status" value="disabled" />
-          <span>Disabled</span>
+          <span>{{ t('cat.disabled') }}</span>
         </label>
       </div>
     </fieldset>
 
     <div class="grid">
       <label class="field">
-        <span class="label">Icon</span>
-        <input formControlName="icon" type="text" placeholder="Optional" />
+        <span class="label">{{ t('cat.icon') }}</span>
+        <input formControlName="icon" type="text" placeholder="{{ t('tx.optional') }}" />
       </label>
       <label class="field">
-        <span class="label">Color</span>
-        <input formControlName="color" type="text" placeholder="Optional" />
+        <span class="label">{{ t('cat.color') }}</span>
+        <input formControlName="color" type="text" placeholder="{{ t('tx.optional') }}" />
       </label>
       <label class="field">
-        <span class="label">Display order</span>
+        <span class="label">{{ t('cat.displayOrder') }}</span>
         <input formControlName="display_order" type="number" />
       </label>
     </div>
 
     <label class="field">
-      <span class="label">Description</span>
-      <textarea formControlName="description" rows="2" placeholder="Optional"></textarea>
+      <span class="label">{{ t('cat.description') }}</span>
+      <textarea formControlName="description" rows="2" placeholder="{{ t('cat.description') }}"></textarea>
     </label>
 
     @if (error()) {
@@ -62,9 +77,9 @@
     }
 
     <div class="form-actions">
-      <button type="button" class="btn" (click)="closed.emit()">Cancel</button>
+      <button type="button" class="btn" (click)="closed.emit()">{{ t('cat.cancel') }}</button>
       <button type="submit" class="btn btn-primary" [disabled]="form.invalid || saving()">
-        {{ saving() ? 'Saving…' : 'Save' }}
+        {{ saving() ? t('tx.saving') : t('cat.save') }}
       </button>
     </div>
   </form>

@@ -1,3 +1,4 @@
+import sqlite3
 from pathlib import Path
 
 from flask import Flask, jsonify
@@ -8,6 +9,21 @@ from .extensions import db
 from .seed import seed_default_categories
 
 BASE_DIR = Path(__file__).resolve().parent
+
+
+def _migrate_schema(app) -> None:
+    """Add columns missing from an existing SQLite database (create_all() adds nothing)."""
+    db_path = app.config["SQLALCHEMY_DATABASE_URI"].replace("sqlite:///", "")
+    if db_path.startswith(":memory:") or not Path(db_path).exists():
+        return
+    conn = sqlite3.connect(db_path)
+    try:
+        cols = {row[1] for row in conn.execute("PRAGMA table_info(categories)")}
+        if "parent_id" not in cols:
+            conn.execute("ALTER TABLE categories ADD COLUMN parent_id INTEGER")
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def create_app(config: dict | None = None) -> Flask:
@@ -30,6 +46,7 @@ def create_app(config: dict | None = None) -> Flask:
         return jsonify({"status": "ok"})
 
     with app.app_context():
+        _migrate_schema(app)
         db.create_all()
         if app.config["SEED_DEFAULT_CATEGORIES"]:
             seed_default_categories()

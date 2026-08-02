@@ -179,3 +179,75 @@ def test_get_missing_category_returns_404(client):
 def test_invalid_filter_type(client):
     res = client.get("/api/categories?type=bogus")
     assert res.status_code == 400
+
+
+def test_create_subcategory(client):
+    parent = _create_category(client, name="Food").get_json()
+    res = client.post(
+        "/api/categories",
+        json={"name": "Groceries", "type": "expense", "status": "enabled", "parent_id": parent["id"]},
+    )
+    assert res.status_code == 201
+    data = res.get_json()
+    assert data["parent_id"] == parent["id"]
+    assert data["parent_name"] == "Food"
+    assert data["child_count"] == 0
+
+    parent_res = client.get(f"/api/categories/{parent['id']}")
+    assert parent_res.get_json()["child_count"] == 1
+
+
+def test_create_subcategory_parent_missing(client):
+    res = _create_category(client, parent_id=9999)
+    assert res.status_code == 400
+    assert "parent_id" in res.get_json()["errors"]
+
+
+def test_create_subcategory_type_mismatch(client):
+    parent = _create_category(client, name="Salary", type="income").get_json()
+    res = _create_category(client, parent_id=parent["id"])
+    assert res.status_code == 400
+    assert "parent_id" in res.get_json()["errors"]
+
+
+def test_create_duplicate_subcategory_same_parent(client, app):
+    parent = _create_category(client, name="Food").get_json()
+    _create_category(client, name="Groceries", parent_id=parent["id"])
+    res = _create_category(client, name="groceries", parent_id=parent["id"])
+    assert res.status_code == 409
+    assert "name" in res.get_json()["errors"]
+
+
+def test_same_subcategory_name_different_parent_allowed(client):
+    p1 = _create_category(client, name="Food").get_json()
+    p2 = _create_category(client, name="Family").get_json()
+    res1 = _create_category(client, name="Groceries", parent_id=p1["id"])
+    assert res1.status_code == 201
+    res2 = _create_category(client, name="Groceries", parent_id=p2["id"])
+    assert res2.status_code == 201
+
+
+def test_category_cannot_be_own_parent(client, app):
+    created = _create_category(client).get_json()
+    res = client.put(f"/api/categories/{created['id']}", json={"parent_id": created["id"]})
+    assert res.status_code == 400
+    assert "parent_id" in res.get_json()["errors"]
+
+
+def test_delete_parent_with_children_blocked(client):
+    parent = _create_category(client, name="Food").get_json()
+    _create_category(client, name="Groceries", parent_id=parent["id"])
+    res = client.delete(f"/api/categories/{parent['id']}")
+    assert res.status_code == 409
+    assert "subcategories" in res.get_json()["error"]
+
+
+def test_parent_type_change_blocked_with_children(client, app):
+    parent = _create_category(client, name="Food").get_json()
+    client.post(
+        "/api/categories",
+        json={"name": "Groceries", "type": "expense", "status": "enabled", "parent_id": parent["id"]},
+    )
+    res = client.put(f"/api/categories/{parent['id']}", json={"type": "income"})
+    assert res.status_code == 409
+    assert "type" in res.get_json()["errors"]

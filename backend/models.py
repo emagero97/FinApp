@@ -3,6 +3,7 @@ from datetime import date, datetime, timezone
 from sqlalchemy import (
     CheckConstraint,
     DateTime,
+    ForeignKey,
     ForeignKeyConstraint,
     Index,
     Integer,
@@ -23,7 +24,7 @@ def utcnow() -> datetime:
 class Category(db.Model):
     __tablename__ = "categories"
     __table_args__ = (
-        UniqueConstraint("name", "type", name="uq_category_name_type"),
+        UniqueConstraint("parent_id", "name", "type", name="uq_category_name_type"),
         CheckConstraint("type IN ('income', 'expense')", name="ck_category_type"),
         CheckConstraint("status IN ('enabled', 'disabled')", name="ck_category_status"),
         Index("ix_category_id_type", "id", "type", unique=True),
@@ -33,6 +34,9 @@ class Category(db.Model):
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     type: Mapped[str] = mapped_column(String(10), nullable=False)
     status: Mapped[str] = mapped_column(String(10), nullable=False, default="enabled")
+    parent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("categories.id"), nullable=True
+    )
     description: Mapped[str | None] = mapped_column(String(255))
     icon: Mapped[str | None] = mapped_column(String(50))
     color: Mapped[str | None] = mapped_column(String(50))
@@ -40,6 +44,13 @@ class Category(db.Model):
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=utcnow, onupdate=utcnow
+    )
+
+    parent: Mapped["Category | None"] = relationship(
+        remote_side="Category.id", back_populates="children"
+    )
+    children: Mapped[list["Category"]] = relationship(
+        back_populates="parent"
     )
 
     transactions: Mapped[list["Transaction"]] = relationship(

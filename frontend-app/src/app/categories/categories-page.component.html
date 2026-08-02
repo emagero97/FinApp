@@ -1,14 +1,14 @@
 <div class="page">
   <header class="page-header">
-    <h1>Categories</h1>
-    <button type="button" class="btn btn-primary" (click)="openCreate()">New category</button>
+    <h1>{{ t('nav.categories') }}</h1>
+    <button type="button" class="btn btn-primary" (click)="openCreate()">{{ t('cat.newBtn') }}</button>
   </header>
 
   <div class="toolbar">
     <input
       class="search"
       type="search"
-      placeholder="Search categories…"
+      placeholder="{{ t('cat.search') }}"
       [value]="search()"
       (input)="search.set($any($event.target).value); load()"
     />
@@ -17,29 +17,29 @@
       [value]="typeFilter()"
       (change)="typeFilter.set($any($event.target).value); load()"
     >
-      <option value="">All types</option>
-      <option value="income">Income</option>
-      <option value="expense">Expense</option>
+      <option value="">{{ t('cat.allTypes') }}</option>
+      <option value="income">{{ t('cat.income') }}</option>
+      <option value="expense">{{ t('cat.expense') }}</option>
     </select>
     <select
       class="filter"
       [value]="statusFilter()"
       (change)="statusFilter.set($any($event.target).value); load()"
     >
-      <option value="">All statuses</option>
-      <option value="enabled">Enabled</option>
-      <option value="disabled">Disabled</option>
+      <option value="">{{ t('cat.allStatuses') }}</option>
+      <option value="enabled">{{ t('cat.enabled') }}</option>
+      <option value="disabled">{{ t('cat.disabled') }}</option>
     </select>
     <select
       class="filter"
       [value]="sortBy()"
       (change)="sortBy.set($any($event.target).value); load()"
     >
-      <option value="name">Sort: name</option>
-      <option value="type">Sort: type</option>
-      <option value="status">Sort: status</option>
-      <option value="transaction_count">Sort: transactions</option>
-      <option value="display_order">Sort: display order</option>
+      <option value="name">{{ t('cat.sortName') }}</option>
+      <option value="type">{{ t('cat.sortType') }}</option>
+      <option value="status">{{ t('cat.sortStatus') }}</option>
+      <option value="transaction_count">{{ t('cat.sortTx') }}</option>
+      <option value="display_order">{{ t('cat.sortOrder') }}</option>
     </select>
     <button type="button" class="btn btn-icon" (click)="sortDir.set(sortDir() === 'asc' ? 'desc' : 'asc'); load()">
       {{ sortDir() === 'asc' ? '▲' : '▼' }}
@@ -47,24 +47,24 @@
   </div>
 
   @if (loading()) {
-    <p class="muted">Loading…</p>
+    <p class="muted">{{ t('tx.loading') }}</p>
   } @else if (categories().length === 0) {
-    <p class="muted">No categories found.</p>
+    <p class="muted">{{ t('cat.noneFound') }}</p>
   } @else {
     <table class="table">
       <thead>
         <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Status</th>
-          <th class="num">Transactions</th>
-          <th class="num">Total amount</th>
-          <th>Last transaction</th>
-          <th class="actions">Actions</th>
+          <th>{{ t('cat.colName') }}</th>
+          <th>{{ t('cat.colType') }}</th>
+          <th>{{ t('cat.colStatus') }}</th>
+          <th class="num">{{ t('cat.colTx') }}</th>
+          <th class="num">{{ t('cat.colAmount') }}</th>
+          <th>{{ t('cat.colLast') }}</th>
+          <th class="actions">{{ t('cat.colActions') }}</th>
         </tr>
       </thead>
       <tbody>
-        @for (category of categories(); track category.id) {
+        @for (category of topLevel(); track category.id) {
           <tr [class.row-disabled]="category.status === 'disabled'">
             <td>
               <span
@@ -78,41 +78,86 @@
             </td>
             <td>
               <span class="badge" [class.badge-income]="category.type === 'income'">
-                {{ category.type === 'income' ? 'Income' : 'Expense' }}
+                {{ category.type === 'income' ? t('cat.income') : t('cat.expense') }}
               </span>
             </td>
             <td>
               <span class="badge" [class.badge-disabled]="category.status === 'disabled'">
-                {{ category.status === 'enabled' ? 'Enabled' : 'Disabled' }}
+                {{ category.status === 'enabled' ? t('cat.enabled') : t('cat.disabled') }}
               </span>
             </td>
             <td class="num">{{ category.transaction_count }}</td>
             <td class="num">{{ formatAmount(category.total_amount) }}</td>
             <td>{{ formatDate(category.last_transaction_date) }}</td>
             <td class="actions">
-              <button type="button" class="btn btn-sm" (click)="openEdit(category)">Edit</button>
+              <button type="button" class="btn btn-sm" (click)="openEdit(category)">{{ t('tx.edit') }}</button>
               <button
                 type="button"
                 class="btn btn-sm"
                 (click)="toggleStatus(category)"
               >
-                {{ category.status === 'enabled' ? 'Disable' : 'Enable' }}
+                {{ category.status === 'enabled' ? t('cat.disable') : t('cat.enable') }}
               </button>
               <button
                 type="button"
                 class="btn btn-sm btn-danger"
-                [disabled]="category.transaction_count > 0"
+                [disabled]="category.transaction_count > 0 || category.child_count > 0"
                 title="{{
-                  category.transaction_count > 0
-                    ? 'Cannot delete a category with linked transactions'
-                    : 'Delete permanently'
+                  category.transaction_count > 0 || category.child_count > 0
+                    ? t('cat.cannotDelete')
+                    : t('cat.deletePermanent')
                 }}"
                 (click)="requestDelete(category)"
               >
-                Delete
+                {{ t('cat.delete') }}
               </button>
             </td>
           </tr>
+          @for (child of childrenOf(category); track child.id) {
+            <tr class="child-row" [class.row-disabled]="child.status === 'disabled'">
+              <td>
+                <span class="color-dot"
+                  [style.background]="child.color || 'var(--border, #cbd2d9)'"
+                ></span>
+                <span class="sub-label">└ </span>{{ child.name }}
+                @if (child.icon) {
+                  <span class="muted"> {{ child.icon }}</span>
+                }
+              </td>
+              <td>
+                <span class="badge" [class.badge-income]="child.type === 'income'">
+                  {{ child.type === 'income' ? t('cat.income') : t('cat.expense') }}
+                </span>
+              </td>
+              <td>
+                <span class="badge" [class.badge-disabled]="child.status === 'disabled'">
+                  {{ child.status === 'enabled' ? t('cat.enabled') : t('cat.disabled') }}
+                </span>
+              </td>
+              <td class="num">{{ child.transaction_count }}</td>
+              <td class="num">{{ formatAmount(child.total_amount) }}</td>
+              <td>{{ formatDate(child.last_transaction_date) }}</td>
+              <td class="actions">
+                <button type="button" class="btn btn-sm" (click)="openEdit(child)">{{ t('tx.edit') }}</button>
+                <button type="button" class="btn btn-sm" (click)="toggleStatus(child)">
+                  {{ child.status === 'enabled' ? t('cat.disable') : t('cat.enable') }}
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-danger"
+                  [disabled]="child.transaction_count > 0 || child.child_count > 0"
+                  title="{{
+                    child.transaction_count > 0 || child.child_count > 0
+                      ? t('cat.cannotDelete')
+                      : t('cat.deletePermanent')
+                  }}"
+                  (click)="requestDelete(child)"
+                >
+                  {{ t('cat.delete') }}
+                </button>
+              </td>
+            </tr>
+          }
         }
       </tbody>
     </table>
@@ -122,6 +167,7 @@
 @if (showForm()) {
   <app-category-form
     [category]="editing()"
+    [parentOptions]="categories()"
     (saved)="onSaved()"
     (closed)="closeForm()"
   ></app-category-form>
@@ -140,13 +186,9 @@
 
 @if (blockedDelete(); as category) {
   <app-confirm-dialog
-    title="Category cannot be deleted"
-    [message]="
-      'This category cannot be deleted because it is associated with ' +
-      category.transaction_count +
-      ' transactions. You can disable it to prevent it from being used for new transactions.'
-    "
-    confirmLabel="OK"
+    title="{{ t('cat.deleteCantTitle') }}"
+    [message]="blockMessage(category)"
+    confirmLabel="{{ t('cat.ok') }}"
     [dangerous]="false"
     (confirmed)="closeConfirm()"
     (dismissed)="closeConfirm()"

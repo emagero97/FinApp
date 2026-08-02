@@ -24,6 +24,9 @@ export class CategoryService {
     if (query.status) {
       params = params.set('status', query.status);
     }
+    if (query.parentId !== undefined && query.parentId !== null) {
+      params = params.set('parent_id', String(query.parentId));
+    }
     if (query.sortBy) {
       params = params.set('sort_by', query.sortBy);
     }

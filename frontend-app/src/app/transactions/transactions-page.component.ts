@@ -4,6 +4,7 @@ import { Category } from '../models/category';
 import { Transaction, TransactionType } from '../models/transaction';
 import { CategoryService } from '../services/category.service';
 import { TransactionService } from '../services/transaction.service';
+import { SettingsService } from '../services/settings.service';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog.component';
 
 function todayIso(): string {
@@ -20,6 +21,7 @@ function todayIso(): string {
 export class TransactionsPageComponent {
   private readonly categoryService = inject(CategoryService);
   private readonly transactionService = inject(TransactionService);
+  private readonly settings = inject(SettingsService);
 
   transactions = signal<Transaction[]>([]);
   categories = signal<Category[]>([]);
@@ -146,6 +148,10 @@ export class TransactionsPageComponent {
 
   formatAmount(value: string): string {
     return Number(value).toFixed(2);
+  }
+
+  t(key: string, params?: Record<string, string | number>): string {
+    return this.settings.t(key, params);
   }
 
   isEditing(txId: number): boolean {

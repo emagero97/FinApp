@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DashboardService } from '../services/dashboard.service';
+import { SettingsService } from '../services/settings.service';
 import { DashboardSummary, PeriodTotals } from '../models/dashboard';
 
 export type PeriodKey = 'week' | 'month' | 'year';
@@ -37,6 +38,7 @@ const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_RADIUS;
 })
 export class DashboardPageComponent {
   private readonly service = inject(DashboardService);
+  private readonly settings = inject(SettingsService);
 
   summary = signal<DashboardSummary | null>(null);
   loading = signal(true);
@@ -157,5 +159,9 @@ export class DashboardPageComponent {
 
   formatMoney(value: string | number): string {
     return Number(value).toFixed(2);
+  }
+
+  t(key: string, params?: Record<string, string | number>): string {
+    return this.settings.t(key, params);
   }
 }

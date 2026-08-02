@@ -1,56 +1,56 @@
 <div class="page">
   <header class="page-header">
-    <h1>Transactions</h1>
-    <span class="muted">Add and manage your income and expenses.</span>
+    <h1>{{ t('nav.transactions') }}</h1>
+    <span class="muted">{{ t('tx.tagline') }}</span>
   </header>
 
   <form class="entry-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
     <div class="form-grid">
       <div class="field">
-        <span class="label">Type</span>
+        <span class="label">{{ t('tx.type') }}</span>
         <div class="radio-row">
           <label class="radio">
             <input type="radio" formControlName="type" value="expense" />
-            <span>Expense</span>
+            <span>{{ t('cat.expense') }}</span>
           </label>
           <label class="radio">
             <input type="radio" formControlName="type" value="income" />
-            <span>Income</span>
+            <span>{{ t('cat.income') }}</span>
           </label>
         </div>
       </div>
 
       <label class="field">
-        <span class="label">Category</span>
+        <span class="label">{{ t('tx.category') }}</span>
         <select formControlName="category_id">
-          <option [ngValue]="null" disabled>Select…</option>
+          <option [ngValue]="null" disabled>{{ t('tx.select') }}</option>
           @for (category of availableCategories(); track category.id) {
             <option [ngValue]="category.id">
               {{ category.name }}
               @if (category.status === 'disabled') {
-                (disabled)
+                ({{ t('tx.disabled') }})
               }
             </option>
           }
         </select>
         @if (availableCategories().length === 0) {
-          <span class="hint">No {{ form.controls.type.value }} categories. Create one first.</span>
+          <span class="hint">{{ t('tx.noCategories', { type: form.controls.type.value ?? '' }) }}</span>
         }
       </label>
 
       <label class="field">
-        <span class="label">Date</span>
+        <span class="label">{{ t('tx.date') }}</span>
         <input formControlName="date" type="date" />
       </label>
 
       <label class="field">
-        <span class="label">Amount</span>
+        <span class="label">{{ t('tx.amount') }}</span>
         <input formControlName="amount" type="number" step="0.01" min="0.01" placeholder="0.00" />
       </label>
 
       <label class="field field-notes">
-        <span class="label">Notes</span>
-        <input formControlName="notes" type="text" placeholder="Optional" />
+        <span class="label">{{ t('tx.notes') }}</span>
+        <input formControlName="notes" type="text" placeholder="{{ t('tx.optional') }}" />
       </label>
     </div>
 
@@ -60,31 +60,31 @@
 
     <div class="form-actions">
       @if (editing(); as tx) {
-        <span class="muted editing-banner">Editing transaction #{{ tx.id }} · {{ tx.category_name }}</span>
-        <button type="button" class="btn" (click)="cancelEdit()">Cancel</button>
+        <span class="muted editing-banner">{{ t('tx.editing') }} #{{ tx.id }} · {{ tx.category_name }}</span>
+        <button type="button" class="btn" (click)="cancelEdit()">{{ t('tx.cancel') }}</button>
       }
-      <button type="button" class="btn" (click)="startCreate()">Reset</button>
+      <button type="button" class="btn" (click)="startCreate()">{{ t('tx.reset') }}</button>
       <button type="submit" class="btn btn-primary" [disabled]="form.invalid || saving()">
-        {{ saving() ? 'Saving…' : editing() ? 'Update' : 'Add' }}
+        {{ saving() ? t('tx.saving') : editing() ? t('tx.update') : t('tx.add') }}
       </button>
     </div>
   </form>
 
   <section class="list">
     @if (loading()) {
-      <p class="muted">Loading…</p>
+      <p class="muted">{{ t('tx.loading') }}</p>
     } @else if (transactions().length === 0) {
-      <p class="muted">No transactions yet. Add one above.</p>
+      <p class="muted">{{ t('tx.none') }}</p>
     } @else {
       <table class="table">
         <thead>
           <tr>
-            <th>Date</th>
-            <th>Type</th>
-            <th>Category</th>
-            <th class="num">Amount</th>
-            <th>Notes</th>
-            <th class="actions">Actions</th>
+            <th>{{ t('tx.date') }}</th>
+            <th>{{ t('tx.type') }}</th>
+            <th>{{ t('tx.category') }}</th>
+            <th class="num">{{ t('tx.amount') }}</th>
+            <th>{{ t('tx.notes') }}</th>
+            <th class="actions">{{ t('cat.colActions') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -93,7 +93,7 @@
               <td>{{ transaction.date }}</td>
               <td>
                 <span class="badge" [class.badge-income]="transaction.type === 'income'">
-                  {{ transaction.type === 'income' ? 'Income' : 'Expense' }}
+                  {{ transaction.type === 'income' ? t('cat.income') : t('cat.expense') }}
                 </span>
               </td>
               <td>{{ transaction.category_name }}</td>
@@ -102,9 +102,9 @@
               </td>
               <td class="notes-cell">{{ transaction.notes || '—' }}</td>
               <td class="actions">
-                <button type="button" class="btn btn-sm" (click)="startEdit(transaction)">Edit</button>
+                <button type="button" class="btn btn-sm" (click)="startEdit(transaction)">{{ t('tx.edit') }}</button>
                 <button type="button" class="btn btn-sm btn-danger" (click)="requestDelete(transaction)">
-                  Delete
+                  {{ t('tx.delete') }}
                 </button>
               </td>
             </tr>
@@ -117,9 +117,15 @@
 
 @if (deleteTarget(); as tx) {
   <app-confirm-dialog
-    title="Delete transaction?"
-    [message]="'Are you sure you want to delete this ' + tx.type + ' of ' + formatAmount(tx.amount) + ' on ' + tx.date + '? This action cannot be undone.'"
-    confirmLabel="Delete"
+    title="{{ t('tx.deleteQuestion') }}"
+    [message]="
+      t('tx.deleteMsg', {
+        type: tx.type,
+        amount: formatAmount(tx.amount),
+        date: tx.date
+      })
+    "
+    confirmLabel="{{ t('tx.delete') }}"
     [dangerous]="true"
     (confirmed)="confirmDelete()"
     (dismissed)="deleteTarget.set(null)"

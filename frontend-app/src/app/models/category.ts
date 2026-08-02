@@ -6,6 +6,9 @@ export interface Category {
   name: string;
   type: CategoryType;
   status: CategoryStatus;
+  parent_id: number | null;
+  parent_name: string | null;
+  child_count: number;
   description: string | null;
   icon: string | null;
   color: string | null;
@@ -21,6 +24,7 @@ export interface CategoryInput {
   name: string;
   type: CategoryType;
   status: CategoryStatus;
+  parent_id?: number | null;
   description?: string | null;
   icon?: string | null;
   color?: string | null;
@@ -31,6 +35,7 @@ export interface CategoryQuery {
   search?: string;
   type?: CategoryType;
   status?: CategoryStatus;
+  parentId?: number;
   sortBy?: string;
   sortDir?: 'asc' | 'desc';
 }

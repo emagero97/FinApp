@@ -21,6 +21,9 @@ def _serialize(category: Category, stats: dict | None = None) -> dict:
         "name": category.name,
         "type": category.type,
         "status": category.status,
+        "parent_id": category.parent_id,
+        "parent_name": category.parent.name if category.parent else None,
+        "child_count": len(category.children),
         "description": category.description,
         "icon": category.icon,
         "color": category.color,
@@ -112,16 +115,52 @@ def _validate_common(data: dict, category: Category | None = None) -> tuple[dict
         else:
             fields["display_order"] = value
 
+    if "parent_id" in data or category is None:
+        parent_id = data.get("parent_id")
+        if parent_id is None:
+            fields["parent_id"] = None
+        elif isinstance(parent_id, bool) or not isinstance(parent_id, int):
+            errors["parent_id"] = "parent_id must be an integer or null"
+        else:
+            parent = db.session.get(Category, parent_id)
+            if parent is None:
+                errors["parent_id"] = "Parent category does not exist"
+            elif category is not None and parent_id == category.id:
+                errors["parent_id"] = "A category cannot be its own parent"
+            else:
+                fields["parent_id"] = parent_id
+
     return fields, errors
 
 
-def _find_duplicate(name: str, category_type: str, exclude_id: int | None = None) -> Category | None:
+def _find_duplicate(
+    name: str, category_type: str, parent_id: int | None, exclude_id: int | None = None
+) -> Category | None:
     query = Category.query.filter(
-        func.lower(Category.name) == name.lower(), Category.type == category_type
+        func.lower(Category.name) == name.lower(),
+        Category.type == category_type,
+        Category.parent_id == parent_id,
     )
     if exclude_id is not None:
         query = query.filter(Category.id != exclude_id)
     return query.first()
+
+
+def _validate_parent(fields: dict) -> dict:
+    """Validate that a parent (if set) has the same type and is not self (already checked)."""
+    parent_id = fields.get("parent_id")
+    if parent_id is None:
+        return {}
+    parent = db.session.get(Category, parent_id)
+    assert parent is not None
+    if parent.type != fields.get("type", parent.type):
+        return {
+            "parent_id": (
+                f"Parent category '{parent.name}' is a {parent.type} category and "
+                f"cannot have a {fields.get('type', parent.type)} subcategory"
+            )
+        }
+    return {}
 
 
 @bp.get("")
@@ -129,6 +168,7 @@ def list_categories():
     search = request.args.get("search", "").strip()
     category_type = request.args.get("type")
     status = request.args.get("status")
+    parent_id = request.args.get("parent_id")
     sort_by = request.args.get("sort_by", "name")
     sort_dir = request.args.get("sort_dir", "asc")
 
@@ -136,6 +176,11 @@ def list_categories():
         return jsonify({"errors": {"type": "Invalid type filter"}}), 400
     if status not in (None, *CATEGORY_STATUSES):
         return jsonify({"errors": {"status": "Invalid status filter"}}), 400
+    if parent_id is not None:
+        try:
+            parent_id = int(parent_id)
+        except ValueError:
+            return jsonify({"errors": {"parent_id": "Invalid parent filter"}}), 400
     if sort_by not in SORTABLE_FIELDS:
         sort_by = "name"
     if sort_dir not in ("asc", "desc"):
@@ -161,6 +206,8 @@ def list_categories():
         query = query.filter(Category.type == category_type)
     if status:
         query = query.filter(Category.status == status)
+    if parent_id is not None:
+        query = query.filter(Category.parent_id == parent_id)
 
     sort_column = {
         "name": Category.name,
@@ -200,7 +247,11 @@ def create_category():
     if errors:
         return jsonify({"errors": errors}), 400
 
-    duplicate = _find_duplicate(fields["name"], fields["type"])
+    parent_errors = _validate_parent(fields)
+    if parent_errors:
+        return jsonify({"errors": parent_errors}), 400
+
+    duplicate = _find_duplicate(fields["name"], fields["type"], fields.get("parent_id"))
     if duplicate is not None:
         return (
             jsonify(
@@ -235,27 +286,35 @@ def update_category(category_id: int):
         .filter(Transaction.category_id == category.id)
         .scalar()
     )
+    child_count = (
+        db.session.query(func.count(Category.id))
+        .filter(Category.parent_id == category.id)
+        .scalar()
+    )
 
     new_type = fields.get("type", category.type)
-    if new_type != category.type and transaction_count > 0:
+    if new_type != category.type and (transaction_count > 0 or child_count > 0):
+        reason = (
+            f"it is linked to {transaction_count} transactions"
+            if transaction_count > 0
+            else f"it has {child_count} subcategories"
+        )
         return (
             jsonify(
                 {
                     "errors": {
-                        "type": (
-                            "This category cannot change type because it is linked to "
-                            f"{transaction_count} transactions"
-                        )
+                        "type": f"This category cannot change type because {reason}"
                     }
                 }
             ),
             409,
         )
 
-    if "name" in fields or "type" in fields:
+    if "name" in fields or "type" in fields or "parent_id" in fields:
         name = fields.get("name", category.name)
         category_type = fields.get("type", category.type)
-        duplicate = _find_duplicate(name, category_type, exclude_id=category.id)
+        parent_id = fields.get("parent_id", category.parent_id)
+        duplicate = _find_duplicate(name, category_type, parent_id, exclude_id=category.id)
         if duplicate is not None:
             return (
                 jsonify(
@@ -263,6 +322,10 @@ def update_category(category_id: int):
                 ),
                 409,
             )
+
+    parent_errors = _validate_parent({**fields, "type": new_type})
+    if parent_errors:
+        return jsonify({"errors": parent_errors}), 400
 
     for key, value in fields.items():
         setattr(category, key, value)
@@ -289,6 +352,24 @@ def delete_category(category_id: int):
                         "This category cannot be deleted because it is associated with "
                         f"{transaction_count} transactions. You can disable it to prevent it "
                         "from being used for new transactions."
+                    )
+                }
+            ),
+            409,
+        )
+
+    child_count = (
+        db.session.query(func.count(Category.id))
+        .filter(Category.parent_id == category.id)
+        .scalar()
+    )
+    if child_count > 0:
+        return (
+            jsonify(
+                {
+                    "error": (
+                        "This category cannot be deleted because it has "
+                        f"{child_count} subcategories. Remove or reassign them first."
                     )
                 }
             ),

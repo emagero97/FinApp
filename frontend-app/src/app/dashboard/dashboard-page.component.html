@@ -1,8 +1,8 @@
 <div class="page">
   <header class="page-header">
     <div>
-      <h1>Dashboard</h1>
-      <p class="muted">Your money situation, day by day.</p>
+      <h1>{{ t('nav.dashboard') }}</h1>
+      <p class="muted">{{ t('dash.tagline') }}</p>
     </div>
     <div class="period-toggle">
       @for (key of periodKeys; track key) {
@@ -12,36 +12,36 @@
           [class.active]="period() === key"
           (click)="setPeriod(key)"
         >
-          {{ key.charAt(0).toUpperCase() + key.slice(1) }}
+          {{ t('dash.' + key) }}
         </button>
       }
     </div>
   </header>
 
   @if (loading()) {
-    <p class="muted">Loading dashboard…</p>
+    <p class="muted">{{ t('tx.loading') }}</p>
   } @else {
     <section class="kpi-row">
       <div class="kpi">
-        <span class="kpi-label">Balance</span>
+        <span class="kpi-label">{{ t('dash.balance') }}</span>
         <span class="kpi-value">{{ formatMoney(kpis().balance) }}</span>
       </div>
       <div class="kpi kpi-income">
-        <span class="kpi-label">Income</span>
+        <span class="kpi-label">{{ t('dash.income') }}</span>
         <span class="kpi-value">+{{ formatMoney(kpis().income) }}</span>
       </div>
       <div class="kpi kpi-expense">
-        <span class="kpi-label">Expenses</span>
+        <span class="kpi-label">{{ t('dash.expenses') }}</span>
         <span class="kpi-value">−{{ formatMoney(kpis().expenses) }}</span>
       </div>
     </section>
 
     <section class="grid">
       <div class="card">
-        <h2>Spending by category</h2>
-        <p class="muted">This month</p>
+        <h2>{{ t('dash.spendByCategory') }}</h2>
+        <p class="muted">{{ t('dash.thisMonth') }}</p>
         @if (pieSegments().length === 0) {
-          <p class="muted empty">No expenses recorded this month.</p>
+          <p class="muted empty">{{ t('dash.noExpensesMonth') }}</p>
         } @else {
           <div class="donut-wrap">
             <svg viewBox="0 0 100 100" class="donut">
@@ -61,7 +61,7 @@
             </svg>
             <div class="donut-center">
               <span class="donut-total">{{ formatMoney(totalExpenses()) }}</span>
-              <span class="donut-caption">total spent</span>
+              <span class="donut-caption">{{ t('dash.totalSpent') }}</span>
             </div>
           </div>
           <ul class="legend">
@@ -78,10 +78,10 @@
       </div>
 
       <div class="card">
-        <h2>Categories vs monthly average</h2>
-        <p class="muted">This month compared to your historical monthly average</p>
+        <h2>{{ t('dash.catVsAvg') }}</h2>
+        <p class="muted">{{ t('dash.catVsAvgSub') }}</p>
         @if (summary()?.category_comparison?.length === 0) {
-          <p class="muted empty">No expense history yet.</p>
+          <p class="muted empty">{{ t('dash.noExpenseHistory') }}</p>
         } @else {
           <div class="cmp-list">
             @for (item of summary()?.category_comparison; track item.category_id) {
@@ -96,14 +96,14 @@
                   <div
                     class="cmp-average"
                     [style.left.%]="pctOfComparison(item.average)"
-                    [title]="'Average ' + formatMoney(item.average)"
+                    [title]="t('dash.average') + ' ' + formatMoney(item.average)"
                   ></div>
                 </div>
                 <div class="cmp-status" [class.over]="item.above_average" [class.under]="!item.above_average">
                   @if (item.above_average) {
-                    over by {{ formatMoney(item.difference) }}
+                    {{ t('dash.overBy') }} {{ formatMoney(item.difference) }}
                   } @else {
-                    {{ formatMoney(absMoney(item.difference)) }} below avg
+                    {{ formatMoney(absMoney(item.difference)) }} {{ t('dash.belowAvg') }}
                   }
                 </div>
               </div>
@@ -113,15 +113,15 @@
       </div>
 
       <div class="card">
-        <h2>This month vs previous years</h2>
-        <p class="muted">Total expenses in {{ monthName() }} across the years</p>
+        <h2>{{ t('dash.monthVsYears') }}</h2>
+        <p class="muted">{{ t('dash.monthVsYearsSub') }}</p>
         @if (monthBars().length === 0) {
-          <p class="muted empty">No data.</p>
+          <p class="muted empty">{{ t('dash.noData') }}</p>
         } @else {
           <div class="bars-container">
             @if (monthAverage() !== null) {
               <div class="avg-line" [style.bottom.%]="(monthAverage()! / monthMax()) * 100">
-                <span class="avg-line-label">avg {{ formatMoney(monthAverage()!) }}</span>
+                <span class="avg-line-label">{{ t('dash.avg') }} {{ formatMoney(monthAverage()!) }}</span>
               </div>
             }
             <div class="bars">
@@ -138,10 +138,10 @@
       </div>
 
       <div class="card">
-        <h2>Last 12 months</h2>
-        <p class="muted">Monthly expenses trend</p>
+        <h2>{{ t('dash.last12') }}</h2>
+        <p class="muted">{{ t('dash.last12Sub') }}</p>
         @if (historyBars().length === 0) {
-          <p class="muted empty">No data.</p>
+          <p class="muted empty">{{ t('dash.noData') }}</p>
         } @else {
           <div class="bars-container">
             <div class="bars">

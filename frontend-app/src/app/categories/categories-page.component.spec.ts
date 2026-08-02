@@ -11,6 +11,9 @@ function sampleCategory(overrides: Partial<Category> = {}): Category {
     name: 'Groceries',
     type: 'expense',
     status: 'enabled',
+    parent_id: null,
+    parent_name: null,
+    child_count: 0,
     description: null,
     icon: null,
     color: '#f59e0b',
@@ -70,7 +73,8 @@ describe('CategoriesPageComponent', () => {
     );
     button?.dispatchEvent(new Event('click'));
     fixture.detectChanges();
-    expect(el.textContent).toContain('permanently delete');
+    const text = el.textContent ?? '';
+    expect(text.includes('permanently delete') || text.includes('cannot be undone')).toBe(true);
   });
 
   it('should block delete and explain when category has transactions', () => {
@@ -84,6 +88,40 @@ describe('CategoriesPageComponent', () => {
     button?.dispatchEvent(new Event('click'));
     fixture.detectChanges();
     expect(el.textContent).toContain('Category cannot be deleted');
+  });
+
+  it('should render subcategories under their parent', () => {
+    const parent = sampleCategory();
+    const child = sampleCategory({
+      id: 2,
+      name: 'Vegetables',
+      parent_id: 1,
+      parent_name: 'Groceries',
+    });
+    service.list.mockReturnValue(of({ categories: [child, parent], total: 2 }));
+    const fixture = TestBed.createComponent(CategoriesPageComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const childRow = Array.from(el.querySelectorAll('tr.child-row')).find((r) =>
+      r.textContent?.includes('Vegetables')
+    );
+    expect(childRow).toBeTruthy();
+    expect(childRow?.classList.contains('row-disabled')).toBe(false);
+  });
+
+  it('should block delete of a parent with children', () => {
+    const parent = sampleCategory({ id: 1, child_count: 1 });
+    service.list.mockReturnValue(of({ categories: [parent], total: 1 }));
+    const fixture = TestBed.createComponent(CategoriesPageComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const button = Array.from(el.querySelectorAll('button')).find((b) =>
+      b.textContent?.trim() === 'Delete'
+    );
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    button?.dispatchEvent(new Event('click'));
+    fixture.detectChanges();
+    expect(el.textContent).toContain('subcategor');
   });
 
   it('should call update when confirming disable', () => {

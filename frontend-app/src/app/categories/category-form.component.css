@@ -64,8 +64,12 @@ select:disabled {
 
 .grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.6rem;
+}
+
+.grid .field {
+  min-width: 0;
 }
 
 .radio-row {

@@ -55,11 +55,12 @@
     <div class="grid">
       <label class="field">
         <span class="label">{{ t('cat.icon') }}</span>
-        <input formControlName="icon" type="text" placeholder="{{ t('tx.optional') }}" />
+        <input formControlName="icon" type="text" placeholder="{{ t('cat.iconPlaceholder') }}" />
       </label>
       <label class="field">
         <span class="label">{{ t('cat.color') }}</span>
-        <input formControlName="color" type="text" placeholder="{{ t('tx.optional') }}" />
+        <input formControlName="color" type="text" placeholder="#f59e0b" />
+        <span class="hint">{{ t('cat.colorHint') }}</span>
       </label>
       <label class="field">
         <span class="label">{{ t('cat.displayOrder') }}</span>

@@ -1,4 +1,4 @@
-import { Component, inject, input, output, signal } from '@angular/core';
+import { Component, effect, inject, input, output, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Category, CategoryInput, CategoryType } from '../models/category';
 import { CategoryService } from '../services/category.service';
@@ -60,19 +60,32 @@ export class CategoryFormComponent {
   }
 
   constructor() {
-    const current = this.category();
-    if (current) {
-      this.form.patchValue({
-        name: current.name,
-        type: current.type,
-        status: current.status,
-        parent_id: current.parent_id,
-        description: current.description ?? '',
-        icon: current.icon ?? '',
-        color: current.color ?? '',
-        display_order: current.display_order ?? 0,
-      });
-    }
+    effect(() => {
+      const current = this.category();
+      if (current) {
+        this.form.patchValue({
+          name: current.name,
+          type: current.type,
+          status: current.status,
+          parent_id: current.parent_id,
+          description: current.description ?? '',
+          icon: current.icon ?? '',
+          color: current.color ?? '',
+          display_order: current.display_order ?? 0,
+        });
+      } else {
+        this.form.reset({
+          name: '',
+          type: 'expense',
+          status: 'enabled',
+          parent_id: null,
+          description: '',
+          icon: '',
+          color: '',
+          display_order: 0,
+        });
+      }
+    });
   }
 
   private buildInput(): CategoryInput {

@@ -57,6 +57,56 @@ describe('CategoryFormComponent', () => {
     expect(fixture.componentInstance.typeLocked).toBe(true);
   });
 
+  it('should prefill the form with the edited category values', () => {
+    const category = {
+      id: 7,
+      name: 'Rent',
+      type: 'expense',
+      status: 'disabled',
+      parent_id: null,
+      description: 'Monthly rent',
+      icon: '🏠',
+      color: '#ef4444',
+      display_order: 3,
+    } as Category;
+    const fixture = TestBed.createComponent(CategoryFormComponent);
+    fixture.componentRef.setInput('category', category);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.form.value).toEqual({
+      name: 'Rent',
+      type: 'expense',
+      status: 'disabled',
+      parent_id: null,
+      description: 'Monthly rent',
+      icon: '🏠',
+      color: '#ef4444',
+      display_order: 3,
+    });
+  });
+
+  it('should reset the form when the category input is cleared', () => {
+    const fixture = TestBed.createComponent(CategoryFormComponent);
+    fixture.componentRef.setInput('category', {
+      id: 1,
+      name: 'Rent',
+      type: 'expense',
+      status: 'enabled',
+    } as Category);
+    fixture.detectChanges();
+    fixture.componentRef.setInput('category', null);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.form.value).toEqual({
+      name: '',
+      type: 'expense',
+      status: 'enabled',
+      parent_id: null,
+      description: '',
+      icon: '',
+      color: '',
+      display_order: 0,
+    });
+  });
+
   it('should surface the server error message', () => {
     service.create.mockReturnValue(
       throwError(() => ({

@@ -55,23 +55,85 @@
     <div class="grid">
       <label class="field">
         <span class="label">{{ t('cat.icon') }}</span>
-        <input formControlName="icon" type="text" placeholder="{{ t('cat.iconPlaceholder') }}" />
+        <div class="picker-input">
+          <span class="icon-preview">{{ form.controls.icon.value || '🙂' }}</span>
+          <input formControlName="icon" type="text" placeholder="{{ t('cat.iconPlaceholder') }}" />
+          <button
+            type="button"
+            class="btn btn-sm picker-toggle"
+            (click)="toggleEmojiPicker()"
+            [class.active]="emojiPickerOpen()"
+          >
+            {{ t('cat.iconPick') }}
+          </button>
+        </div>
+        @if (emojiPickerOpen()) {
+          <div class="picker-popup emoji-popup" (click)="$event.stopPropagation()">
+            <div class="emoji-grid">
+              @for (emoji of emojiOptions; track emoji) {
+                <button
+                  type="button"
+                  class="emoji-cell"
+                  [class.selected]="form.controls.icon.value === emoji"
+                  (click)="selectEmoji(emoji)"
+                >
+                  {{ emoji }}
+                </button>
+              }
+            </div>
+            @if (form.controls.icon.value) {
+              <button type="button" class="btn btn-sm" (click)="clearIcon()">{{ t('cat.clear') }}</button>
+            }
+          </div>
+        }
       </label>
+
       <label class="field">
         <span class="label">{{ t('cat.color') }}</span>
-        <input formControlName="color" type="text" placeholder="#f59e0b" />
+        <div class="picker-input">
+          <span class="color-preview" [style.background]="form.controls.color.value || 'transparent'"></span>
+          <input formControlName="color" type="text" placeholder="#f59e0b" />
+          <button
+            type="button"
+            class="btn btn-sm picker-toggle"
+            (click)="toggleColorPicker()"
+            [class.active]="colorPickerOpen()"
+          >
+            {{ t('cat.colorPick') }}
+          </button>
+        </div>
+        @if (colorPickerOpen()) {
+          <div class="picker-popup color-popup" (click)="$event.stopPropagation()">
+            <div class="color-grid">
+              @for (color of palette; track color) {
+                <button
+                  type="button"
+                  class="color-cell"
+                  [style.background]="color"
+                  [class.selected]="form.controls.color.value === color"
+                  [attr.title]="color"
+                  (click)="selectColor(color)"
+                ></button>
+              }
+            </div>
+            @if (form.controls.color.value) {
+              <button type="button" class="btn btn-sm" (click)="clearColor()">{{ t('cat.clear') }}</button>
+            }
+          </div>
+        }
         <span class="hint">{{ t('cat.colorHint') }}</span>
       </label>
+
       <label class="field">
         <span class="label">{{ t('cat.displayOrder') }}</span>
         <input formControlName="display_order" type="number" />
       </label>
-    </div>
 
-    <label class="field">
-      <span class="label">{{ t('cat.description') }}</span>
-      <textarea formControlName="description" rows="2" placeholder="{{ t('cat.description') }}"></textarea>
-    </label>
+      <label class="field field-description">
+        <span class="label">{{ t('cat.description') }}</span>
+        <textarea formControlName="description" rows="2" placeholder="{{ t('cat.description') }}"></textarea>
+      </label>
+    </div>
 
     @if (error()) {
       <p class="form-error">{{ error() }}</p>

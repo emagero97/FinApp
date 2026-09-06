@@ -19,6 +19,130 @@ export class CategoryFormComponent {
   saving = signal(false);
   error = signal<string | null>(null);
 
+  colorPickerOpen = signal(false);
+  emojiPickerOpen = signal(false);
+
+  readonly palette = [
+    '#ef4444',
+    '#f97316',
+    '#f59e0b',
+    '#eab308',
+    '#84cc16',
+    '#22c55e',
+    '#10b981',
+    '#14b8a6',
+    '#06b6d4',
+    '#0ea5e9',
+    '#3b82f6',
+    '#6366f1',
+    '#8b5cf6',
+    '#a855f7',
+    '#d946ef',
+    '#ec4899',
+    '#f43f5e',
+    '#fb7185',
+    '#fbbf24',
+    '#facc15',
+    '#a3e635',
+    '#4ade80',
+    '#2dd4bf',
+    '#22d3ee',
+    '#38bdf8',
+    '#60a5fa',
+    '#818cf8',
+    '#a78bfa',
+    '#c084fc',
+    '#e879f9',
+    '#f472b6',
+    '#94a3b8',
+    '#64748b',
+    '#475569',
+    '#334155',
+    '#78716c',
+    '#a16207',
+    '#166534',
+    '#155e75',
+    '#7c2d12',
+  ];
+
+  readonly emojiOptions = [
+    '💰',
+    '💸',
+    '💳',
+    '🏦',
+    '🤑',
+    '🧾',
+    '📈',
+    '📉',
+    '🧮',
+    '💼',
+    '📊',
+    '🗂️',
+    '🛒',
+    '🏠',
+    '🚗',
+    '⛽',
+    '🚌',
+    '🚇',
+    '🚕',
+    '🛵',
+    '🚲',
+    '🍽️',
+    '🍔',
+    '🍕',
+    '🌮',
+    '🍎',
+    '🥦',
+    '🧀',
+    '🥚',
+    '🍞',
+    '🍦',
+    '☕',
+    '🍺',
+    '🍷',
+    '🫖',
+    '🛍️',
+    '🎁',
+    '👕',
+    '👟',
+    '🎮',
+    '📺',
+    '🎧',
+    '💻',
+    '🖥️',
+    '📱',
+    '📷',
+    '⌚',
+    '⏰',
+    '🗓️',
+    '✈️',
+    '🏖️',
+    '🌍',
+    '🏥',
+    '🩺',
+    '💊',
+    '🧼',
+    '🧹',
+    '🪴',
+    '🌱',
+    '💡',
+    '🔌',
+    '🔧',
+    '🛏️',
+    '🖼️',
+    '📚',
+    '🎓',
+    '👶',
+    '🐾',
+    '🐶',
+    '🐱',
+    '⚽',
+    '🎬',
+    '🎵',
+    '🎂',
+    '🎉',
+  ];
+
   saved = output<Category>();
   closed = output<void>();
 
@@ -104,6 +228,35 @@ export class CategoryFormComponent {
 
   typeChanged(): void {
     this.form.controls.parent_id.setValue(null);
+  }
+
+  selectColor(color: string): void {
+    this.form.controls.color.setValue(color);
+    this.colorPickerOpen.set(false);
+  }
+
+  selectEmoji(emoji: string): void {
+    this.form.controls.icon.setValue(emoji);
+    this.emojiPickerOpen.set(false);
+  }
+
+  clearColor(): void {
+    this.form.controls.color.setValue('');
+  }
+
+  clearIcon(): void {
+    this.form.controls.icon.setValue('');
+    this.emojiPickerOpen.set(false);
+  }
+
+  toggleColorPicker(): void {
+    this.colorPickerOpen.update((v) => !v);
+    this.emojiPickerOpen.set(false);
+  }
+
+  toggleEmojiPicker(): void {
+    this.emojiPickerOpen.update((v) => !v);
+    this.colorPickerOpen.set(false);
   }
 
   submit(): void {

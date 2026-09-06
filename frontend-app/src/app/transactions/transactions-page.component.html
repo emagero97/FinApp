@@ -39,11 +39,26 @@
       </label>
 
       <label class="field">
+        <span class="label">{{ t('tx.subcategory') }}</span>
+        <select
+          formControlName="subcategory_id"
+          [disabled]="!hasSubcategories()"
+        >
+          <option [ngValue]="null">
+            {{ hasSubcategories() ? t('tx.subcategoryNone') : t('tx.subcategoryUnavailable') }}
+          </option>
+          @for (sub of subcategoriesOfSelected(); track sub.id) {
+            <option [ngValue]="sub.id">{{ sub.name }}</option>
+          }
+        </select>
+      </label>
+
+      <label class="field">
         <span class="label">{{ t('tx.date') }}</span>
         <input formControlName="date" type="date" />
       </label>
 
-      <label class="field">
+      <label class="field field-amount">
         <span class="label">{{ t('tx.amount') }}</span>
         <input formControlName="amount" type="number" step="0.01" min="0.01" placeholder="0.00" />
       </label>
@@ -60,7 +75,7 @@
 
     <div class="form-actions">
       @if (editing(); as tx) {
-        <span class="muted editing-banner">{{ t('tx.editing') }} #{{ tx.id }} · {{ tx.category_name }}</span>
+        <span class="muted editing-banner">{{ t('tx.editing') }} #{{ tx.id }} · {{ categoryPath(tx) }}</span>
         <button type="button" class="btn" (click)="cancelEdit()">{{ t('tx.cancel') }}</button>
       }
       <button type="button" class="btn" (click)="startCreate()">{{ t('tx.reset') }}</button>
@@ -97,7 +112,7 @@
     >
       <option [ngValue]="null">{{ t('tx.allCategories') }}</option>
       @for (category of categories(); track category.id) {
-        <option [ngValue]="category.id">{{ category.name }}</option>
+        <option [ngValue]="category.id">{{ categoryLabel(category) }}</option>
       }
     </select>
     <label class="filter-field">
@@ -151,7 +166,7 @@
                   {{ transaction.type === 'income' ? t('cat.income') : t('cat.expense') }}
                 </span>
               </td>
-              <td>{{ transaction.category_name }}</td>
+              <td>{{ categoryPath(transaction) }}</td>
               <td class="num amount" [class.amount-income]="transaction.type === 'income'">
                 {{ transaction.type === 'income' ? '+' : '−' }}{{ formatAmount(transaction.amount) }}
               </td>

@@ -39,6 +39,7 @@ export class TransactionsPageComponent {
   readonly form = new FormGroup({
     type: new FormControl<TransactionType>('expense', [Validators.required]),
     category_id: new FormControl<number | null>(null, [Validators.required]),
+    subcategory_id: new FormControl<number | null>(null),
     date: new FormControl(todayIso(), [Validators.required]),
     amount: new FormControl<number | null>(null, [Validators.required, Validators.min(0.01)]),
     notes: new FormControl(''),
@@ -50,7 +51,12 @@ export class TransactionsPageComponent {
     this.form.controls.type.valueChanges.subscribe(() => {
       if (!this.editing()) {
         this.form.controls.category_id.setValue(null);
+        this.form.controls.subcategory_id.setValue(null);
       }
+    });
+    // When the parent category changes, clear the sub-category selection.
+    this.form.controls.category_id.valueChanges.subscribe(() => {
+      this.form.controls.subcategory_id.setValue(null);
     });
   }
 
@@ -61,8 +67,22 @@ export class TransactionsPageComponent {
       (category) =>
         category.type === type &&
         (category.status === 'enabled' ||
-          (current != null && category.id === current.category_id))
+          (current != null && category.id === current.category_id)) &&
+        !category.parent_id // only top-level categories here
     );
+  }
+
+  /** Sub-categories (children) of the currently selected top-level category. */
+  subcategoriesOfSelected(): Category[] {
+    const parentId = this.form.controls.category_id.value;
+    if (parentId == null) {
+      return [];
+    }
+    return this.categories().filter((category) => category.parent_id === parentId);
+  }
+
+  hasSubcategories(): boolean {
+    return this.subcategoriesOfSelected().length > 0;
   }
 
   load(): void {
@@ -97,6 +117,7 @@ export class TransactionsPageComponent {
     this.form.reset({
       type: 'expense',
       category_id: null,
+      subcategory_id: null,
       date: todayIso(),
       amount: null,
       notes: '',
@@ -106,9 +127,13 @@ export class TransactionsPageComponent {
   startEdit(transaction: Transaction): void {
     this.editing.set(transaction);
     this.error.set(null);
+    const selected = this.categories().find((c) => c.id === transaction.category_id);
+    const parentId = selected?.parent_id ?? null;
+    const isChild = !!selected?.parent_id;
     this.form.patchValue({
       type: transaction.type,
-      category_id: transaction.category_id,
+      category_id: isChild && parentId != null ? parentId : transaction.category_id,
+      subcategory_id: isChild ? transaction.category_id : null,
       date: transaction.date,
       amount: Number(transaction.amount),
       notes: transaction.notes ?? '',
@@ -126,9 +151,10 @@ export class TransactionsPageComponent {
     this.saving.set(true);
     this.error.set(null);
     const value = this.form.value;
+    const effectiveCategoryId = value.subcategory_id ?? value.category_id!;
     const input = {
       type: value.type!,
-      category_id: value.category_id!,
+      category_id: effectiveCategoryId,
       amount: value.amount!,
       date: value.date!,
       notes: value.notes?.trim() ? value.notes.trim() : null,
@@ -189,6 +215,23 @@ export class TransactionsPageComponent {
 
   formatAmount(value: string): string {
     return Number(value).toFixed(2);
+  }
+
+  /** Full category path, e.g. "Food / Groceries" for a sub-category transaction. */
+  categoryPath(transaction: Transaction): string {
+    return this.categoryLabel(this.categories().find((c) => c.id === transaction.category_id));
+  }
+
+  /** Full path for a category, e.g. "Food / Groceries", or "—" when unknown. */
+  categoryLabel(category: Category | undefined): string {
+    if (!category) {
+      return '—';
+    }
+    if (category.parent_id != null) {
+      const parent = this.categories().find((c) => c.id === category.parent_id);
+      return parent ? `${parent.name} / ${category.name}` : category.name;
+    }
+    return category.name;
   }
 
   parseCategoryId(value: string): number | null {

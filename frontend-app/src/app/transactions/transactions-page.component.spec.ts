@@ -40,6 +40,27 @@ const disabledExpense: Category = {
   status: 'disabled',
 };
 
+const foodCategory: Category = {
+  ...expenseCategory,
+  id: 4,
+  name: 'Food',
+  child_count: 2,
+};
+
+const groceriesChild: Category = {
+  ...expenseCategory,
+  id: 5,
+  name: 'Groceries child',
+  parent_id: 4,
+};
+
+const diningChild: Category = {
+  ...expenseCategory,
+  id: 6,
+  name: 'Dining out',
+  parent_id: 4,
+};
+
 const sampleTransaction: Transaction = {
   id: 10,
   type: 'expense',
@@ -131,6 +152,98 @@ describe('TransactionsPageComponent', () => {
     const tx: Transaction = { ...sampleTransaction, category_id: 3, category_name: 'Old expense' };
     component.startEdit(tx);
     expect(component.availableCategories().map((c) => c.name)).toContain('Old expense');
+  });
+
+  it('should only offer top-level categories for the main category select', () => {
+    categoryService.list.mockReturnValue(
+      of({ categories: [foodCategory, groceriesChild, diningChild, incomeCategory], total: 4 })
+    );
+    const fixture = TestBed.createComponent(TransactionsPageComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.form.controls.type.setValue('expense');
+    expect(component.availableCategories().map((c) => c.name)).toEqual(['Food']);
+  });
+
+  it('should expose sub-categories of the selected category', () => {
+    categoryService.list.mockReturnValue(
+      of({ categories: [foodCategory, groceriesChild, diningChild, incomeCategory], total: 4 })
+    );
+    const fixture = TestBed.createComponent(TransactionsPageComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.form.patchValue({ type: 'expense', category_id: 4 });
+    expect(component.hasSubcategories()).toBe(true);
+    expect(component.subcategoriesOfSelected().map((c) => c.name)).toEqual([
+      'Groceries child',
+      'Dining out',
+    ]);
+  });
+
+  it('should submit the selected sub-category id, falling back to the parent', () => {
+    categoryService.list.mockReturnValue(
+      of({ categories: [foodCategory, groceriesChild, diningChild, incomeCategory], total: 4 })
+    );
+    const fixture = TestBed.createComponent(TransactionsPageComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.form.patchValue({
+      type: 'expense',
+      category_id: 4,
+      subcategory_id: 5,
+      date: '2026-07-15',
+      amount: 10,
+      notes: '',
+    });
+    component.submit();
+    expect(transactionService.create).toHaveBeenCalledWith(
+      expect.objectContaining({ category_id: 5 })
+    );
+
+    component.form.patchValue({
+      category_id: 4,
+      subcategory_id: null,
+      date: '2026-07-15',
+      amount: 10,
+      notes: '',
+    });
+    component.submit();
+    expect(transactionService.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({ category_id: 4 })
+    );
+  });
+
+  it('should restore parent + sub-category when editing a sub-category transaction', () => {
+    categoryService.list.mockReturnValue(
+      of({ categories: [foodCategory, groceriesChild, diningChild, incomeCategory], total: 4 })
+    );
+    const fixture = TestBed.createComponent(TransactionsPageComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    const tx: Transaction = { ...sampleTransaction, category_id: 5, category_name: 'Groceries child' };
+    component.startEdit(tx);
+    expect(component.form.controls.category_id.value).toBe(4);
+    expect(component.form.controls.subcategory_id.value).toBe(5);
+  });
+
+  it('should show the full category path in the list for sub-category transactions', () => {
+    categoryService.list.mockReturnValue(
+      of({ categories: [foodCategory, groceriesChild, diningChild, incomeCategory], total: 4 })
+    );
+    transactionService.list.mockReturnValue(
+      of({
+        transactions: [
+          { ...sampleTransaction, category_id: 5, category_name: 'Groceries child' },
+        ],
+        total: 1,
+      })
+    );
+    const fixture = TestBed.createComponent(TransactionsPageComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    const tx = component.transactions()[0];
+    expect(component.categoryPath(tx)).toBe('Food / Groceries child');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Food / Groceries child');
   });
 
   it('should update when editing and delete on confirm', () => {

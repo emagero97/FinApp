@@ -74,6 +74,28 @@ def test_dashboard_periods(client, data):
     assert periods["year"]["balance"] == "1850.00"
 
 
+def test_dashboard_month_includes_future_dated_transactions(client, data, app):
+    with app.app_context():
+        expense = Category.query.filter_by(name="Groceries").first()
+        db.session.add(
+            Transaction(
+                type="expense",
+                category_id=expense.id,
+                amount=80.00,
+                date=date.fromisoformat("2026-07-25"),
+                notes="future",
+            )
+        )
+        db.session.commit()
+
+    periods = client.get("/api/dashboard").get_json()["periods"]
+    # week (last 7 days up to today) excludes the future transaction
+    assert periods["week"]["expenses"] == "620.00"
+    # month covers the whole month, including future-dated transactions
+    assert periods["month"]["expenses"] == "700.00"
+    assert periods["year"]["expenses"] == "730.00"
+
+
 def test_dashboard_category_breakdown(client, data):
     breakdown = client.get("/api/dashboard").get_json()["category_breakdown"]
     assert len(breakdown) == 2

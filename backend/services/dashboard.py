@@ -15,7 +15,7 @@ def _totals(start: date, end: date) -> dict:
         db.session.query(
             Transaction.type, func.coalesce(func.sum(Transaction.amount), 0)
         )
-        .filter(Transaction.date >= start, Transaction.date <= end)
+        .filter(Transaction.date >= start, Transaction.date < end)
         .group_by(Transaction.type)
         .all()
     )
@@ -43,7 +43,7 @@ def _category_breakdown(start: date, end: date) -> list[dict]:
             func.coalesce(func.sum(Transaction.amount), 0),
         )
         .join(Transaction, Transaction.category_id == Category.id)
-        .filter(Transaction.type == "expense", Transaction.date >= start, Transaction.date <= end)
+        .filter(Transaction.type == "expense", Transaction.date >= start, Transaction.date < end)
         .group_by(Category.id, Category.name, Category.color)
         .order_by(func.sum(Transaction.amount).desc())
         .all()
@@ -75,7 +75,7 @@ def _category_comparison(start: date, end: date) -> list[dict]:
             Transaction.category_id,
             func.coalesce(func.sum(Transaction.amount), 0),
         )
-        .filter(Transaction.type == "expense", Transaction.date >= start, Transaction.date <= end)
+        .filter(Transaction.type == "expense", Transaction.date >= start, Transaction.date < end)
         .group_by(Transaction.category_id)
         .all()
     )
@@ -171,16 +171,18 @@ def build_dashboard() -> dict:
     today = date.today()
     week_start = today - timedelta(days=6)
     month_start = _month_start(today)
+    month_end = _add_months(today, 1)
     year_start = today.replace(month=1, day=1)
+    year_end = date(today.year + 1, 1, 1)
 
     return {
         "periods": {
-            "week": _totals(week_start, today),
-            "month": _totals(month_start, today),
-            "year": _totals(year_start, today),
+            "week": _totals(week_start, today + timedelta(days=1)),
+            "month": _totals(month_start, month_end),
+            "year": _totals(year_start, year_end),
         },
-        "category_breakdown": _category_breakdown(month_start, today),
-        "category_comparison": _category_comparison(month_start, today),
+        "category_breakdown": _category_breakdown(month_start, month_end),
+        "category_comparison": _category_comparison(month_start, month_end),
         "month_comparison": _month_comparison(),
         "monthly_history": _monthly_history(),
     }

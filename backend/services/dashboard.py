@@ -1,12 +1,9 @@
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
-from flask import Blueprint, jsonify
 from sqlalchemy import func
 
 from ..extensions import db
 from ..models import Category, Transaction
-
-bp = Blueprint("dashboard", __name__, url_prefix="/api/dashboard")
 
 
 def _fmt(value) -> str:
@@ -170,23 +167,20 @@ def _monthly_history() -> list[dict]:
     return months
 
 
-@bp.get("")
-def dashboard():
+def build_dashboard() -> dict:
     today = date.today()
     week_start = today - timedelta(days=6)
     month_start = _month_start(today)
     year_start = today.replace(month=1, day=1)
 
-    return jsonify(
-        {
-            "periods": {
-                "week": _totals(week_start, today),
-                "month": _totals(month_start, today),
-                "year": _totals(year_start, today),
-            },
-            "category_breakdown": _category_breakdown(month_start, today),
-            "category_comparison": _category_comparison(month_start, today),
-            "month_comparison": _month_comparison(),
-            "monthly_history": _monthly_history(),
-        }
-    )
+    return {
+        "periods": {
+            "week": _totals(week_start, today),
+            "month": _totals(month_start, today),
+            "year": _totals(year_start, today),
+        },
+        "category_breakdown": _category_breakdown(month_start, today),
+        "category_comparison": _category_comparison(month_start, today),
+        "month_comparison": _month_comparison(),
+        "monthly_history": _monthly_history(),
+    }

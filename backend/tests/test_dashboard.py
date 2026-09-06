@@ -2,7 +2,7 @@ from datetime import date
 
 import pytest
 
-import backend.api.dashboard as dashboard_module
+import backend.services.dashboard as dashboard_module
 from backend.extensions import db
 from backend.models import Category, Transaction
 

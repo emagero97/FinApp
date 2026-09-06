@@ -32,3 +32,9 @@ FinApp/
 ├── venv/               # Python virtual environment
 ├── desktop.ps1         # PowerShell startup / build orchestration script
 └── README.md
+---
+
+## To Build
+
+Execute the build.ps1 script, zip the folder in FinApp\electron\release\win-unpacked and execute the file Finapp.exe
+The DB SqlLite is locate in C:\Users\<UserName>\AppData\Roaming\finapp-desktop\finapp.db

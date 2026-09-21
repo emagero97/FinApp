@@ -1,11 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { of } from 'rxjs';
+import { defer, of } from 'rxjs';
 import { TransactionsPageComponent } from './transactions-page.component';
 import { CategoryService } from '../services/category.service';
 import { TransactionService } from '../services/transaction.service';
 import { Category } from '../models/category';
-import { Transaction } from '../models/transaction';
+import { Transaction, TransactionListResponse } from '../models/transaction';
 
 const expenseCategory: Category = {
   id: 1,
@@ -260,5 +260,76 @@ describe('TransactionsPageComponent', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Delete transaction?');
     component.confirmDelete();
     expect(transactionService.delete).toHaveBeenCalledWith(10);
+  });
+
+  it('should send the search query when typing in the search input', () => {
+    const fixture = TestBed.createComponent(TransactionsPageComponent);
+    fixture.detectChanges();
+    const input = (fixture.nativeElement as HTMLElement).querySelector('input.search') as HTMLInputElement;
+    input.value = 'shop';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(transactionService.list).toHaveBeenLastCalledWith(expect.objectContaining({ search: 'shop' }));
+  });
+
+  it('should apply the category filter with the selected category id, not its label', () => {
+    const fixture = TestBed.createComponent(TransactionsPageComponent);
+    fixture.detectChanges();
+    const selects = (fixture.nativeElement as HTMLElement).querySelectorAll('select.filter');
+    const categorySelect = selects[1] as HTMLSelectElement;
+    expect(categorySelect.options.length).toBe(3);
+    categorySelect.selectedIndex = 1; // Groceries
+    categorySelect.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(transactionService.list).toHaveBeenLastCalledWith(expect.objectContaining({ category_id: 1 }));
+  });
+
+  it('should reset the category filter to null when "All categories" is selected', () => {
+    const fixture = TestBed.createComponent(TransactionsPageComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.filterCategory.set(1);
+    fixture.detectChanges();
+    const selects = (fixture.nativeElement as HTMLElement).querySelectorAll('select.filter');
+    const categorySelect = selects[1] as HTMLSelectElement;
+    categorySelect.selectedIndex = 0; // All categories
+    categorySelect.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(component.filterCategory()).toBeNull();
+    expect(transactionService.list).toHaveBeenLastCalledWith({});
+  });
+
+  it('should ignore stale in-flight responses and keep the latest search results', async () => {
+    const fixture = TestBed.createComponent(TransactionsPageComponent);
+    fixture.detectChanges();
+
+    let resolveStale!: (v: TransactionListResponse) => void;
+    let resolveFresh!: (v: TransactionListResponse) => void;
+    const stale = new Promise<TransactionListResponse>((r) => (resolveStale = r));
+    const fresh = new Promise<TransactionListResponse>((r) => (resolveFresh = r));
+
+    transactionService.list
+      .mockReturnValueOnce(defer(() => stale))
+      .mockReturnValueOnce(defer(() => fresh));
+
+    const input = (fixture.nativeElement as HTMLElement).querySelector('input.search') as HTMLInputElement;
+
+    input.value = 'sp';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    input.value = 'spesa';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    resolveFresh({ transactions: [{ ...sampleTransaction, id: 2, notes: 'fresh' }], total: 1 });
+    await new Promise((r) => setTimeout(r, 0));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.transactions().map((t) => t.notes)).toEqual(['fresh']);
+
+    resolveStale({ transactions: [{ ...sampleTransaction, id: 1, notes: 'stale' }], total: 1 });
+    await new Promise((r) => setTimeout(r, 0));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.transactions().map((t) => t.notes)).toEqual(['fresh']);
   });
 });

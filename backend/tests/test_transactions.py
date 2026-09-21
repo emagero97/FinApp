@@ -202,6 +202,31 @@ def test_list_search_matches_amount_and_category(client, expense_category):
     assert res.get_json()["transactions"][0]["notes"] == "lunch"
 
 
+def test_list_category_filter_includes_subcategories(client, app):
+    with app.app_context():
+        parent = Category(name="Food", type="expense", status="enabled")
+        db.session.add(parent)
+        db.session.flush()
+        child = Category(name="Groceries", type="expense", status="enabled", parent_id=parent.id)
+        db.session.add(child)
+        db.session.commit()
+        parent_id = parent.id
+        child_id = child.id
+
+    _create(client, category_id=child_id, amount=10.00, date="2026-07-01", notes="child tx")
+    _create(client, category_id=parent_id, amount=20.00, date="2026-07-02", notes="parent tx")
+
+    res = client.get(f"/api/transactions?category_id={parent_id}")
+    data = res.get_json()
+    assert data["total"] == 2
+    assert {t["notes"] for t in data["transactions"]} == {"child tx", "parent tx"}
+
+    res = client.get(f"/api/transactions?category_id={child_id}")
+    data = res.get_json()
+    assert data["total"] == 1
+    assert data["transactions"][0]["notes"] == "child tx"
+
+
 def test_list_default_sorted_by_date_desc(client, expense_category):
     _create(client, category_id=expense_category, date="2026-07-01")
     _create(client, category_id=expense_category, date="2026-07-20")

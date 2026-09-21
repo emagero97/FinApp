@@ -210,7 +210,9 @@ select:focus {
 }
 
 .actions {
-  text-align: right;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
   white-space: nowrap;
 }
 
@@ -227,53 +229,6 @@ select:focus {
 .badge-income {
   background: rgb(52 211 153 / 15%);
   color: #34d399;
-}
-
-.btn {
-  padding: 0.5rem 0.9rem;
-  border: 1px solid var(--border, #334155);
-  border-radius: 6px;
-  background: var(--surface, #1e293b);
-  color: var(--text, #e2e8f0);
-  font-size: 0.85rem;
-  font-weight: 500;
-  font-family: inherit;
-  cursor: pointer;
-}
-
-.btn:hover:not(:disabled) {
-  border-color: var(--text-muted, #94a3b8);
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-sm {
-  padding: 0.25rem 0.6rem;
-  font-size: 0.8rem;
-}
-
-.btn-primary {
-  background: var(--primary, #818cf8);
-  border-color: var(--primary, #818cf8);
-  color: #fff;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: var(--primary-dark, #6366f1);
-  border-color: var(--primary-dark, #6366f1);
-}
-
-.btn-danger {
-  color: var(--danger, #f87171);
-  border-color: var(--danger, #f87171);
-  background: transparent;
-}
-
-.btn-danger:hover:not(:disabled) {
-  background: rgb(248 113 113 / 10%);
 }
 
 .field-amount input:disabled,

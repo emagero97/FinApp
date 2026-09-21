@@ -6,6 +6,7 @@ import { CategoryService } from '../services/category.service';
 import { TransactionService } from '../services/transaction.service';
 import { SettingsService } from '../services/settings.service';
 import { ConfirmDialogComponent } from '../shared/confirm-dialog.component';
+import { Subscription } from 'rxjs';
 
 function todayIso(): string {
   const now = new Date();
@@ -35,6 +36,8 @@ export class TransactionsPageComponent {
   filterCategory = signal<number | null>(null);
   filterDateFrom = signal('');
   filterDateTo = signal('');
+
+  private loadSubscription: Subscription | null = null;
 
   readonly form = new FormGroup({
     type: new FormControl<TransactionType>('expense', [Validators.required]),
@@ -104,7 +107,8 @@ export class TransactionsPageComponent {
     if (search) {
       query.search = search;
     }
-    this.transactionService.list(query).subscribe({
+    this.loadSubscription?.unsubscribe();
+    this.loadSubscription = this.transactionService.list(query).subscribe({
       next: (res) => this.transactions.set(res.transactions),
       error: () => this.transactions.set([]),
       complete: () => this.loading.set(false),
@@ -194,6 +198,11 @@ export class TransactionsPageComponent {
     this.load();
   }
 
+  onFilterCategory(value: number | null): void {
+    this.filterCategory.set(value);
+    this.load();
+  }
+
   hasFilters(): boolean {
     return !!(
       this.searchQuery() ||
@@ -232,10 +241,6 @@ export class TransactionsPageComponent {
       return parent ? `${parent.name} / ${category.name}` : category.name;
     }
     return category.name;
-  }
-
-  parseCategoryId(value: string): number | null {
-    return value === '' ? null : Number(value);
   }
 
   t(key: string, params?: Record<string, string | number>): string {

@@ -17,6 +17,20 @@ def _parse_date(value) -> date | None:
     return None
 
 
+def _category_and_descendants(category_id: int) -> list[int]:
+    """Return the category id and all of its descendant (sub-category) ids."""
+    ids = [category_id]
+    parents = [category_id]
+    while parents:
+        children = [
+            child_id
+            for (child_id,) in db.session.query(Category.id).filter(Category.parent_id.in_(parents))
+        ]
+        ids.extend(children)
+        parents = children
+    return ids
+
+
 def list_transactions(args) -> list[tuple[Transaction, str]]:
     transaction_type = args.get("type")
     category_id = args.get("category_id")
@@ -45,7 +59,7 @@ def list_transactions(args) -> list[tuple[Transaction, str]]:
     if transaction_type:
         query = query.filter(Transaction.type == transaction_type)
     if category_id is not None:
-        query = query.filter(Transaction.category_id == category_id)
+        query = query.filter(Transaction.category_id.in_(_category_and_descendants(category_id)))
     if date_from:
         parsed_from = _parse_date(date_from)
         if parsed_from is None:

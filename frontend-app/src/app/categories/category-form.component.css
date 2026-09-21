@@ -155,6 +155,7 @@ select:disabled {
 
 .picker-toggle.active {
   background: var(--primary, #818cf8);
+  border-color: var(--primary, #818cf8);
   color: #fff;
 }
 

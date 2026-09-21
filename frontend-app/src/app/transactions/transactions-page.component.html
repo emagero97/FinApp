@@ -104,11 +104,9 @@
     </select>
     <select
       class="filter"
-      [value]="filterCategory()"
-      (change)="
-        filterCategory.set(parseCategoryId($any($event.target).value));
-        load()
-      "
+      name="filterCategory"
+      [ngModel]="filterCategory()"
+      (ngModelChange)="onFilterCategory($event)"
     >
       <option [ngValue]="null">{{ t('tx.allCategories') }}</option>
       @for (category of categories(); track category.id) {

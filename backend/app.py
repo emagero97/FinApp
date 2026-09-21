@@ -5,7 +5,13 @@ from pathlib import Path
 from flask import Flask, jsonify
 from flask_cors import CORS
 
-from .api import categories_bp, dashboard_bp, export_bp, transactions_bp
+from .api import (
+    categories_bp,
+    dashboard_bp,
+    export_bp,
+    import_bp,
+    transactions_bp,
+)
 from .extensions import db
 from .seed import seed_default_categories
 
@@ -52,6 +58,7 @@ def create_app(config: dict | None = None) -> Flask:
     app.register_blueprint(transactions_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(export_bp)
+    app.register_blueprint(import_bp)
 
     @app.get("/api/health")
     def health():

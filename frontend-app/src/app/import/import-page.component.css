@@ -1,0 +1,249 @@
+:host {
+  display: block;
+  padding: 1.5rem;
+  max-width: 1000px;
+  margin: 0 auto;
+  color: var(--text, #e2e8f0);
+}
+
+.page-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.muted {
+  color: var(--text-muted, #94a3b8);
+  font-size: 0.9rem;
+}
+
+.panel {
+  background: var(--surface, #1e293b);
+  border: 1px solid var(--border, #334155);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.panel-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.group-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.hint {
+  margin: 0;
+  color: var(--text-muted, #94a3b8);
+  font-size: 0.85rem;
+}
+
+.file-input {
+  max-width: 100%;
+}
+
+.file-selected {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.file-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.status {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 160px;
+}
+
+.progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-raised, #334155);
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 40%;
+  border-radius: 999px;
+  background: var(--primary, #818cf8);
+  animation: progress-slide 1.1s ease-in-out infinite;
+}
+
+@keyframes progress-slide {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+.form-error {
+  margin: 0;
+  color: var(--danger, #f87171);
+  font-size: 0.85rem;
+}
+
+.form-success {
+  margin: 0;
+  color: var(--success, #34d399);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.summary {
+  gap: 0.9rem;
+}
+
+.summary h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.9rem;
+  margin: 0;
+}
+
+.summary-grid dt {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted, #94a3b8);
+}
+
+.summary-grid dd {
+  margin: 0.15rem 0 0;
+  font-size: 0.95rem;
+}
+
+.summary-grid .rows {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.category-tags {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.category-tags li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--border, #334155);
+  border-radius: 999px;
+  background: var(--surface-muted, #0f172a);
+  font-size: 0.85rem;
+}
+
+.tag-type {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tag-income {
+  color: var(--success, #34d399);
+}
+
+.tag-expense {
+  color: var(--danger, #f87171);
+}
+
+.summary-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.1rem;
+}
+
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.summary-table th {
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted, #94a3b8);
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--border, #334155);
+}
+
+.summary-table td {
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--border, #334155);
+}
+
+.summary-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-table .amount-income {
+  color: var(--success, #34d399);
+}
+
+.summary-table .amount-expense {
+  color: var(--danger, #f87171);
+}
+
+.invalid-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+  color: var(--danger, #f87171);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}

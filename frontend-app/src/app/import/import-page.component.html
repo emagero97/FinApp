@@ -1,0 +1,175 @@
+<div class="page">
+  <header class="page-header">
+    <h1>{{ t('imp.header') }}</h1>
+    <span class="muted">{{ t('imp.tagline') }}</span>
+  </header>
+
+  <section class="panel">
+    <div class="panel-group">
+      <span class="group-title">{{ t('imp.file') }}</span>
+      <p class="hint">{{ t('imp.fileHint') }}</p>
+      <input
+        type="file"
+        #fileInput
+        class="file-input"
+        accept=".csv,text/csv,text/plain"
+        (change)="onFileSelected(fileInput)"
+      />
+      @if (selectedFile()) {
+        <p class="file-selected">{{ t('imp.fileSelected') }}: <strong>{{ selectedFile()!.name }}</strong></p>
+      }
+      @if (error()) {
+        <p class="form-error">{{ error() }}</p>
+      }
+    </div>
+
+    <div class="file-actions">
+      <button
+        type="button"
+        class="btn btn-primary"
+        [disabled]="processing()"
+        (click)="runPreview(fileInput)"
+      >
+        {{ analyzing() ? t('imp.analyzing') : t('imp.analyze') }}
+      </button>
+      @if (processing()) {
+        <div class="status" role="status" aria-live="polite">
+          <div class="progress"><div class="progress-bar"></div></div>
+          <span class="muted">{{ statusText() }}</span>
+        </div>
+      }
+    </div>
+  </section>
+
+  @if (preview(); as preview) {
+    <section class="panel summary">
+      <h2>{{ t('imp.recap') }}</h2>
+      <p class="hint">{{ t('imp.confirmHint') }}</p>
+
+      <dl class="summary-grid">
+        <div>
+          <dt>{{ t('imp.toInsert') }}</dt>
+          <dd class="rows">{{ preview.total }}</dd>
+        </div>
+        <div>
+          <dt>{{ t('imp.invalid') }}</dt>
+          <dd class="rows">{{ preview.invalid }}</dd>
+        </div>
+      </dl>
+
+      <div class="panel-group">
+        <span class="group-title">{{ t('imp.newCategories') }}</span>
+        @if (preview.new_categories.length > 0) {
+          <ul class="category-tags">
+            @for (category of preview.new_categories; track category.name + '-' + category.type) {
+              <li>
+                <span class="tag-name">{{ category.name }}</span>
+                <span class="tag-type tag-{{ category.type }}">{{ categoryType(category) }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <span class="muted">{{ t('imp.noNewCategories') }}</span>
+        }
+      </div>
+
+      <div class="summary-columns">
+        <div class="panel-group">
+          <span class="group-title">{{ t('imp.byMonth') }}</span>
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th>{{ t('imp.month') }}</th>
+                <th class="num">{{ t('imp.count') }}</th>
+                <th class="num">{{ t('imp.income') }}</th>
+                <th class="num">{{ t('imp.expenses') }}</th>
+                <th class="num">{{ t('imp.total') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of preview.summary_months; track row.month) {
+                <tr>
+                  <td>{{ formatMonth(row.month!) }}</td>
+                  <td class="num">{{ row.count }}</td>
+                  <td class="num amount-income">{{ formatAmount(row.income) }}</td>
+                  <td class="num amount-expense">{{ formatAmount(row.expenses) }}</td>
+                  <td class="num">{{ formatAmount(row.total) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel-group">
+          <span class="group-title">{{ t('imp.byYear') }}</span>
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th>{{ t('imp.year') }}</th>
+                <th class="num">{{ t('imp.count') }}</th>
+                <th class="num">{{ t('imp.income') }}</th>
+                <th class="num">{{ t('imp.expenses') }}</th>
+                <th class="num">{{ t('imp.total') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of preview.summary_years; track row.year) {
+                <tr>
+                  <td>{{ row.year }}</td>
+                  <td class="num">{{ row.count }}</td>
+                  <td class="num amount-income">{{ formatAmount(row.income) }}</td>
+                  <td class="num amount-expense">{{ formatAmount(row.expenses) }}</td>
+                  <td class="num">{{ formatAmount(row.total) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      @if (preview.invalid_rows.length > 0) {
+        <div class="panel-group">
+          <span class="group-title">{{ t('imp.invalidRows') }}</span>
+          <ul class="invalid-list">
+            @for (row of preview.invalid_rows; track row.line) {
+              <li>
+                <strong>{{ t('imp.line') }} {{ row.line }}:</strong>
+                {{ row.errors.join('; ') }}
+              </li>
+            }
+          </ul>
+        </div>
+      }
+
+      @if (preview.new_categories.length > 0) {
+        <label class="checkbox">
+          <input type="checkbox" [checked]="createCategories()" (change)="createCategories.set($any($event.target).checked)" />
+          <span>{{ t('imp.createCategories') }}</span>
+        </label>
+        <p class="hint">{{ t('imp.createCategoriesHint') }}</p>
+        @if (!createCategories()) {
+          <p class="form-error">{{ t('imp.blocked') }}</p>
+        }
+      }
+    </section>
+
+    <div class="actions">
+      <button type="button" class="btn btn-primary" [disabled]="!canImport()" (click)="confirmImport()">
+        {{ committing() ? t('imp.importing') : t('imp.confirm') }}
+      </button>
+    </div>
+  }
+
+  @if (result(); as result) {
+    <section class="panel">
+      <p class="form-success">{{ t('imp.success', successParams(result)) }}</p>
+      @if (result.categories_created.length > 0) {
+        <ul class="category-tags">
+          @for (name of result.categories_created; track $index) {
+            <li><span class="tag-name">{{ name }}</span></li>
+          }
+        </ul>
+      }
+    </section>
+  }
+</div>

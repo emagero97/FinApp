@@ -28,4 +28,12 @@ describe('DashboardService', () => {
     expect(req.request.method).toBe('GET');
     req.flush({ periods: { month: { income: '2500.00' } } });
   });
+
+  it('should pass month and scope filters as query params', () => {
+    service.get({ month: '2026-06', scope: 'year' }).subscribe();
+
+    const req = httpMock.expectOne('/api/dashboard?month=2026-06&scope=year');
+    expect(req.request.method).toBe('GET');
+    req.flush({});
+  });
 });

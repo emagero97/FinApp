@@ -4,6 +4,7 @@ from sqlalchemy import func
 
 from ..extensions import db
 from ..models import Category, Transaction
+from .errors import ServiceError
 
 
 def _fmt(value) -> str:
@@ -104,10 +105,21 @@ def _category_comparison(start: date, end: date) -> list[dict]:
     return items
 
 
-def _month_comparison() -> dict:
-    today = date.today()
-    month = today.month
-    year = today.year
+def _parse_month(value: str | None) -> tuple[int, int]:
+    if not value:
+        today = date.today()
+        return today.year, today.month
+    try:
+        year_str, month_str = value.split("-", 1)
+        year = int(year_str)
+        month = int(month_str)
+        date(year, month, 1)
+        return year, month
+    except ValueError:
+        raise ServiceError(400, {"error": "month must be in YYYY-MM format"}) from None
+
+
+def _month_comparison(year: int, month: int) -> dict:
     current_total = (
         db.session.query(func.coalesce(func.sum(Transaction.amount), 0))
         .filter(
@@ -167,22 +179,30 @@ def _monthly_history() -> list[dict]:
     return months
 
 
-def build_dashboard() -> dict:
+def build_dashboard(month: str | None = None, scope: str = "month") -> dict:
+    if scope not in ("month", "year"):
+        raise ServiceError(400, {"error": "scope must be 'month' or 'year'"})
+    year, month_no = _parse_month(month)
+    month_start = date(year, month_no, 1)
+    month_end = _add_months(month_start, 1)
+    recap_start = date(year, 1, 1) if scope == "year" else month_start
+    recap_end = month_end
+
     today = date.today()
     week_start = today - timedelta(days=6)
-    month_start = _month_start(today)
-    month_end = _add_months(today, 1)
+    cur_month_start = _month_start(today)
+    cur_month_end = _add_months(today, 1)
     year_start = today.replace(month=1, day=1)
     year_end = date(today.year + 1, 1, 1)
 
     return {
         "periods": {
             "week": _totals(week_start, today + timedelta(days=1)),
-            "month": _totals(month_start, month_end),
+            "month": _totals(cur_month_start, cur_month_end),
             "year": _totals(year_start, year_end),
         },
-        "category_breakdown": _category_breakdown(month_start, month_end),
-        "category_comparison": _category_comparison(month_start, month_end),
-        "month_comparison": _month_comparison(),
+        "category_breakdown": _category_breakdown(recap_start, recap_end),
+        "category_comparison": _category_comparison(recap_start, recap_end),
+        "month_comparison": _month_comparison(year, month_no),
         "monthly_history": _monthly_history(),
     }

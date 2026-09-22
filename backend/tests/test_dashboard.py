@@ -122,3 +122,40 @@ def test_dashboard_month_comparison(client, data):
     prev = {item["year"]: item for item in comparison["previous_years"]}
     assert prev[2025]["total"] == "50.00"
     assert comparison["average_previous"] == "50.00"
+
+
+def test_dashboard_selected_month(client, data):
+    res = client.get("/api/dashboard?month=2025-07").get_json()
+    comparison = res["month_comparison"]
+    assert comparison["year"] == 2025
+    assert comparison["month"] == 7
+    assert comparison["current_total"] == "50.00"
+    assert comparison["average_previous"] is None
+    assert res["category_breakdown"][0]["name"] == "Groceries"
+    assert res["category_breakdown"][0]["total"] == "50.00"
+    assert len(res["monthly_history"]) == 12
+
+
+def test_dashboard_scope_year(client, data):
+    res = client.get("/api/dashboard?scope=year").get_json()
+    breakdown = {item["name"]: item["total"] for item in res["category_breakdown"]}
+    # year-to-date (Jan -> Jul 2026): 120 Jul + 30 Mar for Groceries, 500 for Rent
+    assert breakdown == {"Rent": "500.00", "Groceries": "150.00"}
+    comparison = {item["name"]: item for item in res["category_comparison"]}
+    assert comparison["Groceries"]["current"] == "150.00"
+
+
+def test_dashboard_scope_year_selected_month(client, data):
+    res = client.get("/api/dashboard?month=2026-03&scope=year").get_json()
+    breakdown = {item["name"]: item["total"] for item in res["category_breakdown"]}
+    # Jan -> Mar 2026: only the March Groceries transaction
+    assert breakdown == {"Groceries": "30.00"}
+
+
+def test_dashboard_invalid_month(client):
+    assert client.get("/api/dashboard?month=garbage").status_code == 400
+    assert client.get("/api/dashboard?month=2026-13").status_code == 400
+
+
+def test_dashboard_invalid_scope(client):
+    assert client.get("/api/dashboard?scope=bogus").status_code == 400

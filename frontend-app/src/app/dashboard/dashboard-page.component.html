@@ -3,18 +3,18 @@
     <div>
       <h1>{{ t('nav.dashboard') }}</h1>
       <p class="muted">{{ t('dash.tagline') }}</p>
-    </div>
-    <div class="period-toggle">
-      @for (key of periodKeys; track key) {
-        <button
-          type="button"
-          class="period-btn"
-          [class.active]="period() === key"
-          (click)="setPeriod(key)"
-        >
-          {{ t('dash.' + key) }}
-        </button>
-      }
+      <div class="period-toggle period-head-switch">
+        @for (key of periodKeys; track key) {
+          <button
+            type="button"
+            class="period-btn"
+            [class.active]="period() === key"
+            (click)="setPeriod(key)"
+          >
+            {{ t('dash.' + key) }}
+          </button>
+        }
+      </div>
     </div>
   </header>
 
@@ -36,85 +36,131 @@
       </div>
     </section>
 
+    <div class="divider"></div>
+
+    <section class="block">
+      <div class="period-toggle">
+        <span class="scope-label">{{ t('dash.scope') }}</span>
+        @for (key of scopeKeys; track key) {
+          <button
+            type="button"
+            class="period-btn"
+            [class.active]="recapScope() === key"
+            (click)="setRecapScope(key)"
+          >
+            {{ t('dash.' + key) }}
+          </button>
+        }
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h2>{{ t('dash.spendByCategory') }}</h2>
+          <p class="muted">{{ recapSubtitle() }}</p>
+          @if (pieSegments().length === 0) {
+            <p class="muted empty">{{ t('dash.noExpensesMonth') }}</p>
+          } @else {
+            <div class="donut-wrap">
+              <svg viewBox="0 0 100 100" class="donut">
+                @for (seg of pieSegments(); track seg.name) {
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    fill="none"
+                    [attr.stroke]="seg.color"
+                    stroke-width="18"
+                    [attr.stroke-dasharray]="dashArray(seg)"
+                    [attr.stroke-dashoffset]="dashOffset(seg)"
+                    transform="rotate(-90 50 50)"
+                  ></circle>
+                }
+              </svg>
+              <div class="donut-center">
+                <span class="donut-total">{{ formatMoney(totalExpenses()) }}</span>
+                <span class="donut-caption">{{ t('dash.totalSpent') }}</span>
+              </div>
+            </div>
+            <ul class="legend">
+              @for (seg of pieSegments(); track seg.name) {
+                <li class="legend-item">
+                  <span class="legend-dot" [style.background]="seg.color"></span>
+                  <span class="legend-name">{{ seg.name }}</span>
+                  <span class="legend-value">{{ formatMoney(seg.total) }}</span>
+                  <span class="legend-pct">{{ seg.pct.toFixed(1) }}%</span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+
+        <div class="card">
+          <h2>{{ t('dash.catVsAvg') }}</h2>
+          <p class="muted">{{ recapSubtitle() }}</p>
+          @if (summary()?.category_comparison?.length === 0) {
+            <p class="muted empty">{{ t('dash.noExpenseHistory') }}</p>
+          } @else {
+            <div class="cmp-list">
+              @for (item of summary()?.category_comparison; track item.category_id) {
+                <div class="cmp-row">
+                  <div class="cmp-label">{{ item.name }}</div>
+                  <div class="cmp-track">
+                    <div
+                      class="cmp-current"
+                      [style.width.%]="pctOfComparison(item.current)"
+                      [style.background]="item.color || 'var(--primary)'"
+                    ></div>
+                    <div
+                      class="cmp-average"
+                      [style.left.%]="pctOfComparison(item.average)"
+                      [title]="t('dash.average') + ' ' + formatMoney(item.average)"
+                    ></div>
+                  </div>
+                  <div class="cmp-status" [class.over]="item.above_average" [class.under]="!item.above_average">
+                    @if (item.above_average) {
+                      {{ t('dash.overBy') }} {{ formatMoney(item.difference) }}
+                    } @else {
+                      {{ formatMoney(absMoney(item.difference)) }} {{ t('dash.belowAvg') }}
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
     <section class="grid">
       <div class="card">
-        <h2>{{ t('dash.spendByCategory') }}</h2>
-        <p class="muted">{{ t('dash.thisMonth') }}</p>
-        @if (pieSegments().length === 0) {
-          <p class="muted empty">{{ t('dash.noExpensesMonth') }}</p>
+        <h2>{{ t('dash.last12') }}</h2>
+        <p class="muted">{{ t('dash.last12Sub') }}</p>
+        @if (historyBars().length === 0) {
+          <p class="muted empty">{{ t('dash.noData') }}</p>
         } @else {
-          <div class="donut-wrap">
-            <svg viewBox="0 0 100 100" class="donut">
-              @for (seg of pieSegments(); track seg.name) {
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="40"
-                  fill="none"
-                  [attr.stroke]="seg.color"
-                  stroke-width="18"
-                  [attr.stroke-dasharray]="dashArray(seg)"
-                  [attr.stroke-dashoffset]="dashOffset(seg)"
-                  transform="rotate(-90 50 50)"
-                ></circle>
+          <div class="bars-container">
+            <div class="bars">
+              @for (bar of historyBars(); track bar.monthKey) {
+                <div
+                  class="bar-col bar-clickable"
+                  [class.bar-selected]="bar.isCurrent"
+                  (click)="selectMonth(bar.monthKey)"
+                >
+                  <div class="bar-value">{{ formatMoney(bar.value) }}</div>
+                  <div class="bar" [class.bar-current]="bar.isCurrent" [style.height.%]="(bar.value / historyMax()) * 100"></div>
+                  <div class="bar-label">{{ bar.label }}</div>
+                </div>
               }
-            </svg>
-            <div class="donut-center">
-              <span class="donut-total">{{ formatMoney(totalExpenses()) }}</span>
-              <span class="donut-caption">{{ t('dash.totalSpent') }}</span>
             </div>
           </div>
-          <ul class="legend">
-            @for (seg of pieSegments(); track seg.name) {
-              <li class="legend-item">
-                <span class="legend-dot" [style.background]="seg.color"></span>
-                <span class="legend-name">{{ seg.name }}</span>
-                <span class="legend-value">{{ formatMoney(seg.total) }}</span>
-                <span class="legend-pct">{{ seg.pct.toFixed(1) }}%</span>
-              </li>
-            }
-          </ul>
         }
       </div>
 
       <div class="card">
-        <h2>{{ t('dash.catVsAvg') }}</h2>
-        <p class="muted">{{ t('dash.catVsAvgSub') }}</p>
-        @if (summary()?.category_comparison?.length === 0) {
-          <p class="muted empty">{{ t('dash.noExpenseHistory') }}</p>
-        } @else {
-          <div class="cmp-list">
-            @for (item of summary()?.category_comparison; track item.category_id) {
-              <div class="cmp-row">
-                <div class="cmp-label">{{ item.name }}</div>
-                <div class="cmp-track">
-                  <div
-                    class="cmp-current"
-                    [style.width.%]="pctOfComparison(item.current)"
-                    [style.background]="item.color || 'var(--primary)'"
-                  ></div>
-                  <div
-                    class="cmp-average"
-                    [style.left.%]="pctOfComparison(item.average)"
-                    [title]="t('dash.average') + ' ' + formatMoney(item.average)"
-                  ></div>
-                </div>
-                <div class="cmp-status" [class.over]="item.above_average" [class.under]="!item.above_average">
-                  @if (item.above_average) {
-                    {{ t('dash.overBy') }} {{ formatMoney(item.difference) }}
-                  } @else {
-                    {{ formatMoney(absMoney(item.difference)) }} {{ t('dash.belowAvg') }}
-                  }
-                </div>
-              </div>
-            }
-          </div>
-        }
-      </div>
-
-      <div class="card">
-        <h2>{{ t('dash.monthVsYears') }}</h2>
-        <p class="muted">{{ t('dash.monthVsYearsSub') }}</p>
+        <h2>{{ monthVsYearsTitle() }}</h2>
+        <p class="muted">{{ monthVsYearsSubtitle() }}</p>
         @if (monthBars().length === 0) {
           <p class="muted empty">{{ t('dash.noData') }}</p>
         } @else {
@@ -129,26 +175,6 @@
                 <div class="bar-col">
                   <div class="bar-value">{{ formatMoney(bar.value) }}</div>
                   <div class="bar" [class.bar-current]="bar.isCurrent" [style.height.%]="(bar.value / monthMax()) * 100"></div>
-                  <div class="bar-label">{{ bar.label }}</div>
-                </div>
-              }
-            </div>
-          </div>
-        }
-      </div>
-
-      <div class="card card-wide">
-        <h2>{{ t('dash.last12') }}</h2>
-        <p class="muted">{{ t('dash.last12Sub') }}</p>
-        @if (historyBars().length === 0) {
-          <p class="muted empty">{{ t('dash.noData') }}</p>
-        } @else {
-          <div class="bars-container">
-            <div class="bars">
-              @for (bar of historyBars(); track bar.label) {
-                <div class="bar-col">
-                  <div class="bar-value">{{ formatMoney(bar.value) }}</div>
-                  <div class="bar" [class.bar-current]="bar.isCurrent" [style.height.%]="(bar.value / historyMax()) * 100"></div>
                   <div class="bar-label">{{ bar.label }}</div>
                 </div>
               }

@@ -1,9 +1,12 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
+import { Observable, catchError, of, switchMap } from 'rxjs';
 import { DashboardService } from '../services/dashboard.service';
 import { SettingsService } from '../services/settings.service';
 import { DashboardSummary, PeriodTotals } from '../models/dashboard';
 
 export type PeriodKey = 'week' | 'month' | 'year';
+export type ScopeKey = 'month' | 'year';
 
 export interface PieSegment {
   name: string;
@@ -20,6 +23,7 @@ export interface MonthBar {
 }
 
 export interface HistoryBar {
+  monthKey: string;
   label: string;
   value: number;
   isCurrent: boolean;
@@ -39,22 +43,48 @@ const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_RADIUS;
 export class DashboardPageComponent {
   private readonly service = inject(DashboardService);
   private readonly settings = inject(SettingsService);
+  private readonly destroyRef = inject(DestroyRef);
 
   summary = signal<DashboardSummary | null>(null);
   loading = signal(true);
   period = signal<PeriodKey>('month');
+  selectedMonth = signal<string>(this.currentMonthKey());
+  recapScope = signal<ScopeKey>('month');
   readonly periodKeys: PeriodKey[] = ['week', 'month', 'year'];
+  readonly scopeKeys: ScopeKey[] = ['month', 'year'];
+
+  private readonly requestParams = computed(() => ({
+    month: this.selectedMonth(),
+    scope: this.recapScope(),
+  }));
 
   constructor() {
-    this.service.get().subscribe({
-      next: (summary) => this.summary.set(summary),
-      error: () => this.summary.set(null),
-      complete: () => this.loading.set(false),
-    });
+    const sub = toObservable(this.requestParams)
+      .pipe(
+        switchMap((params) => {
+          this.loading.set(true);
+          return this.service.get(params).pipe(
+            catchError(() => of(null) as Observable<DashboardSummary | null>)
+          );
+        })
+      )
+      .subscribe((summary) => {
+        this.summary.set(summary);
+        this.loading.set(false);
+      });
+    this.destroyRef.onDestroy(() => sub.unsubscribe());
   }
 
   setPeriod(period: PeriodKey): void {
     this.period.set(period);
+  }
+
+  setRecapScope(scope: ScopeKey): void {
+    this.recapScope.set(scope);
+  }
+
+  selectMonth(monthKey: string): void {
+    this.selectedMonth.set(monthKey);
   }
 
   kpis(): PeriodTotals {
@@ -122,9 +152,10 @@ export class DashboardPageComponent {
     return items.map((item) => {
       const [year, month] = item.month.split('-');
       return {
+        monthKey: item.month,
         label: `${MONTH_NAMES[Number(month) - 1]} ${year.slice(2)}`,
         value: Number(item.total),
-        isCurrent: item.month === this.currentMonthKey(),
+        isCurrent: item.month === this.selectedMonth(),
       };
     });
   });
@@ -136,9 +167,36 @@ export class DashboardPageComponent {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   }
 
-  monthName(): string {
-    const comparison = this.summary()?.month_comparison;
-    return comparison ? MONTH_NAMES[comparison.month - 1] : '';
+  private selectedMonthParts(): { month: string; year: number } {
+    const [year, month] = this.selectedMonth().split('-');
+    return { month: MONTH_NAMES[Number(month) - 1], year: Number(year) };
+  }
+
+  isCurrentMonthSelected(): boolean {
+    return this.selectedMonth() === this.currentMonthKey();
+  }
+
+  recapSubtitle(): string {
+    if (this.recapScope() === 'year') {
+      return this.isCurrentMonthSelected()
+        ? this.t('dash.yearToDate')
+        : this.t('dash.recapYearNamed', this.selectedMonthParts());
+    }
+    return this.isCurrentMonthSelected()
+      ? this.t('dash.thisMonth')
+      : this.t('dash.recapMonthNamed', this.selectedMonthParts());
+  }
+
+  monthVsYearsTitle(): string {
+    return this.isCurrentMonthSelected()
+      ? this.t('dash.monthVsYears')
+      : this.t('dash.monthVsYearsSelected', this.selectedMonthParts());
+  }
+
+  monthVsYearsSubtitle(): string {
+    return this.isCurrentMonthSelected()
+      ? this.t('dash.monthVsYearsSub')
+      : this.t('dash.monthVsYearsSubSelected', this.selectedMonthParts());
   }
 
   dashArray(segment: PieSegment): string {

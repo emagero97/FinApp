@@ -122,4 +122,45 @@ describe('DashboardPageComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('No expenses recorded this month.');
   });
+
+  it('should fetch with the selected month and scope', () => {
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.selectMonth('2026-06');
+    component.setRecapScope('year');
+    fixture.detectChanges();
+    expect(service.get).toHaveBeenLastCalledWith({ month: '2026-06', scope: 'year' });
+  });
+
+  it('should select a month when clicking a history bar', () => {
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const barLabels = Array.from(el.querySelectorAll('.bar-label'));
+    const target = barLabels.find((label) => label.textContent?.includes('Jun'));
+    (target?.parentElement as HTMLElement).click();
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    expect(component.selectedMonth()).toBe('2026-06');
+    expect(component.historyBars().find((bar) => bar.monthKey === '2026-06')?.isCurrent).toBe(true);
+  });
+
+  it('should show a named subtitle for a selected past month', () => {
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.selectMonth('2026-07');
+    fixture.detectChanges();
+    expect(component.recapSubtitle()).toBe('Jul 2026');
+  });
+
+  it('should show the year-to-date subtitle when the scope is year', () => {
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.setRecapScope('year');
+    fixture.detectChanges();
+    expect(component.recapSubtitle()).toBe('Year to date');
+  });
 });

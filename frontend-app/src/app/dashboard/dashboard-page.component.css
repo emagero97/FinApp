@@ -39,6 +39,20 @@
   padding: 0.25rem;
 }
 
+.period-head-switch {
+  margin-top: 0.9rem;
+}
+
+.scope-label {
+  align-self: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #94a3b8);
+  padding: 0 0.35rem 0 0.15rem;
+}
+
 .period-btn {
   border: none;
   background: transparent;
@@ -99,6 +113,17 @@
   color: var(--danger, #f87171);
 }
 
+.divider {
+  border-top: 1px solid var(--border, #334155);
+  margin: 1.5rem 0;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -110,10 +135,6 @@
   border: 1px solid var(--border, #334155);
   border-radius: 12px;
   padding: 1.25rem;
-}
-
-.card-wide {
-  grid-column: 1 / -1;
 }
 
 .card h2 {
@@ -294,6 +315,20 @@
 
 .bar-current {
   background: var(--primary, #818cf8);
+}
+
+.bar-clickable {
+  cursor: pointer;
+}
+
+.bar-clickable:hover .bar:not(.bar-current) {
+  background: var(--primary-soft, rgb(129 140 248 / 50%));
+}
+
+.bar-clickable.bar-selected .bar-value,
+.bar-clickable.bar-selected .bar-label {
+  color: var(--primary, #818cf8);
+  font-weight: 600;
 }
 
 .bar-label {

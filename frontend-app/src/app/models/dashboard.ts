@@ -45,6 +45,7 @@ export interface DashboardSummary {
     month: PeriodTotals;
     year: PeriodTotals;
   };
+  recap_totals: PeriodTotals;
   category_breakdown: CategoryBreakdownItem[];
   category_comparison: CategoryComparisonItem[];
   month_comparison: MonthComparison;

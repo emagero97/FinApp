@@ -57,6 +57,9 @@ def test_dashboard_empty(client, fixed_today):
         assert data["periods"][period]["income"] == "0.00"
         assert data["periods"][period]["expenses"] == "0.00"
         assert data["periods"][period]["balance"] == "0.00"
+    assert data["recap_totals"]["income"] == "0.00"
+    assert data["recap_totals"]["expenses"] == "0.00"
+    assert data["recap_totals"]["balance"] == "0.00"
     assert data["category_breakdown"] == []
     assert data["category_comparison"] == []
     assert len(data["monthly_history"]) == 12
@@ -133,6 +136,10 @@ def test_dashboard_selected_month(client, data):
     assert comparison["average_previous"] is None
     assert res["category_breakdown"][0]["name"] == "Groceries"
     assert res["category_breakdown"][0]["total"] == "50.00"
+    # recap is scoped to the selected month
+    assert res["recap_totals"]["expenses"] == "50.00"
+    assert res["recap_totals"]["income"] == "0.00"
+    assert res["recap_totals"]["balance"] == "-50.00"
     assert len(res["monthly_history"]) == 12
 
 
@@ -143,6 +150,10 @@ def test_dashboard_scope_year(client, data):
     assert breakdown == {"Rent": "500.00", "Groceries": "150.00"}
     comparison = {item["name"]: item for item in res["category_comparison"]}
     assert comparison["Groceries"]["current"] == "150.00"
+    # YTD recap: Jan -> Jul 2026 (120 Jul + 500 Rent + 30 Mar Groceries)
+    assert res["recap_totals"]["expenses"] == "650.00"
+    assert res["recap_totals"]["income"] == "2500.00"
+    assert res["recap_totals"]["balance"] == "1850.00"
 
 
 def test_dashboard_scope_year_selected_month(client, data):
@@ -150,6 +161,8 @@ def test_dashboard_scope_year_selected_month(client, data):
     breakdown = {item["name"]: item["total"] for item in res["category_breakdown"]}
     # Jan -> Mar 2026: only the March Groceries transaction
     assert breakdown == {"Groceries": "30.00"}
+    assert res["recap_totals"]["expenses"] == "30.00"
+    assert res["recap_totals"]["balance"] == "-30.00"
 
 
 def test_dashboard_invalid_month(client):

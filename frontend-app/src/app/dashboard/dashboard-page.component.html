@@ -11,7 +11,7 @@
             [class.active]="period() === key"
             (click)="setPeriod(key)"
           >
-            {{ t('dash.' + key) }}
+            {{ currentPeriodLabel(key) }}
           </button>
         }
       </div>
@@ -39,96 +39,131 @@
     <div class="divider"></div>
 
     <section class="block">
-      <div class="period-toggle">
-        <span class="scope-label">{{ t('dash.scope') }}</span>
-        @for (key of scopeKeys; track key) {
-          <button
-            type="button"
-            class="period-btn"
-            [class.active]="recapScope() === key"
-            (click)="setRecapScope(key)"
-          >
-            {{ t('dash.' + key) }}
-          </button>
-        }
-      </div>
+      <button
+        type="button"
+        class="recap-toggle"
+        (click)="toggleRecap()"
+        [attr.aria-expanded]="recapOpen()"
+      >
+        <span class="recap-toggle-title">{{ t('dash.recap') }}</span>
+        <span class="muted recap-toggle-sub">{{ recapSubtitle() }}</span>
+        <span class="recap-chevron" [class.open]="recapOpen()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m6 9 6 6 6-6"></path>
+          </svg>
+        </span>
+      </button>
 
-      <div class="grid">
-        <div class="card">
-          <h2>{{ t('dash.spendByCategory') }}</h2>
-          <p class="muted">{{ recapSubtitle() }}</p>
-          @if (pieSegments().length === 0) {
-            <p class="muted empty">{{ t('dash.noExpensesMonth') }}</p>
-          } @else {
-            <div class="donut-wrap">
-              <svg viewBox="0 0 100 100" class="donut">
-                @for (seg of pieSegments(); track seg.name) {
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="40"
-                    fill="none"
-                    [attr.stroke]="seg.color"
-                    stroke-width="18"
-                    [attr.stroke-dasharray]="dashArray(seg)"
-                    [attr.stroke-dashoffset]="dashOffset(seg)"
-                    transform="rotate(-90 50 50)"
-                  ></circle>
-                }
-              </svg>
-              <div class="donut-center">
-                <span class="donut-total">{{ formatMoney(totalExpenses()) }}</span>
-                <span class="donut-caption">{{ t('dash.totalSpent') }}</span>
-              </div>
-            </div>
-            <ul class="legend">
-              @for (seg of pieSegments(); track seg.name) {
-                <li class="legend-item">
-                  <span class="legend-dot" [style.background]="seg.color"></span>
-                  <span class="legend-name">{{ seg.name }}</span>
-                  <span class="legend-value">{{ formatMoney(seg.total) }}</span>
-                  <span class="legend-pct">{{ seg.pct.toFixed(1) }}%</span>
-                </li>
-              }
-            </ul>
+      @if (recapOpen()) {
+        <div class="period-toggle">
+          <span class="scope-label">{{ t('dash.scope') }}</span>
+          @for (key of scopeKeys; track key) {
+            <button
+              type="button"
+              class="period-btn"
+              [class.active]="recapScope() === key"
+              (click)="setRecapScope(key)"
+            >
+              {{ t('dash.' + key) }}
+            </button>
           }
         </div>
 
-        <div class="card">
-          <h2>{{ t('dash.catVsAvg') }}</h2>
-          <p class="muted">{{ recapSubtitle() }}</p>
-          @if (summary()?.category_comparison?.length === 0) {
-            <p class="muted empty">{{ t('dash.noExpenseHistory') }}</p>
-          } @else {
-            <div class="cmp-list">
-              @for (item of summary()?.category_comparison; track item.category_id) {
-                <div class="cmp-row">
-                  <div class="cmp-label">{{ item.name }}</div>
-                  <div class="cmp-track">
-                    <div
-                      class="cmp-current"
-                      [style.width.%]="pctOfComparison(item.current)"
-                      [style.background]="item.color || 'var(--primary)'"
-                    ></div>
-                    <div
-                      class="cmp-average"
-                      [style.left.%]="pctOfComparison(item.average)"
-                      [title]="t('dash.average') + ' ' + formatMoney(item.average)"
-                    ></div>
-                  </div>
-                  <div class="cmp-status" [class.over]="item.above_average" [class.under]="!item.above_average">
-                    @if (item.above_average) {
-                      {{ t('dash.overBy') }} {{ formatMoney(item.difference) }}
-                    } @else {
-                      {{ formatMoney(absMoney(item.difference)) }} {{ t('dash.belowAvg') }}
-                    }
-                  </div>
+        <header class="recap-totals-head">
+          <p class="muted recap-totals-subtitle">{{ recapSubtitle() }}</p>
+          <div class="kpi-row kpi-row-compact">
+            <div class="kpi">
+              <span class="kpi-label">{{ t('dash.balance') }}</span>
+              <span class="kpi-value">{{ formatMoney(recapTotals().balance) }}</span>
+            </div>
+            <div class="kpi kpi-income">
+              <span class="kpi-label">{{ t('dash.income') }}</span>
+              <span class="kpi-value">+{{ formatMoney(recapTotals().income) }}</span>
+            </div>
+            <div class="kpi kpi-expense">
+              <span class="kpi-label">{{ t('dash.expenses') }}</span>
+              <span class="kpi-value">−{{ formatMoney(recapTotals().expenses) }}</span>
+            </div>
+          </div>
+        </header>
+
+        <div class="grid">
+          <div class="card">
+            <h2>{{ t('dash.spendByCategory') }}</h2>
+            <p class="muted">{{ recapSubtitle() }}</p>
+            @if (pieSegments().length === 0) {
+              <p class="muted empty">{{ t('dash.noExpensesMonth') }}</p>
+            } @else {
+              <div class="donut-wrap">
+                <svg viewBox="0 0 100 100" class="donut">
+                  @for (seg of pieSegments(); track seg.name) {
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="none"
+                      [attr.stroke]="seg.color"
+                      stroke-width="18"
+                      [attr.stroke-dasharray]="dashArray(seg)"
+                      [attr.stroke-dashoffset]="dashOffset(seg)"
+                      transform="rotate(-90 50 50)"
+                    ></circle>
+                  }
+                </svg>
+                <div class="donut-center">
+                  <span class="donut-total">{{ formatMoney(totalExpenses()) }}</span>
+                  <span class="donut-caption">{{ t('dash.totalSpent') }}</span>
                 </div>
-              }
-            </div>
-          }
+              </div>
+              <ul class="legend">
+                @for (seg of pieSegments(); track seg.name) {
+                  <li class="legend-item">
+                    <span class="legend-dot" [style.background]="seg.color"></span>
+                    <span class="legend-name">{{ seg.name }}</span>
+                    <span class="legend-value">{{ formatMoney(seg.total) }}</span>
+                    <span class="legend-pct">{{ seg.pct.toFixed(1) }}%</span>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+
+          <div class="card">
+            <h2>{{ t('dash.catVsAvg') }}</h2>
+            <p class="muted">{{ recapSubtitle() }}</p>
+            @if (summary()?.category_comparison?.length === 0) {
+              <p class="muted empty">{{ t('dash.noExpenseHistory') }}</p>
+            } @else {
+              <div class="cmp-list">
+                @for (item of summary()?.category_comparison; track item.category_id) {
+                  <div class="cmp-row">
+                    <div class="cmp-label">{{ item.name }}</div>
+                    <div class="cmp-track">
+                      <div
+                        class="cmp-current"
+                        [style.width.%]="pctOfComparison(item.current)"
+                        [style.background]="item.color || 'var(--primary)'"
+                      ></div>
+                      <div
+                        class="cmp-average"
+                        [style.left.%]="pctOfComparison(item.average)"
+                        [title]="t('dash.average') + ' ' + formatMoney(item.average)"
+                      ></div>
+                    </div>
+                    <div class="cmp-status" [class.over]="item.above_average" [class.under]="!item.above_average">
+                      @if (item.above_average) {
+                        {{ t('dash.overBy') }} {{ formatMoney(item.difference) }}
+                      } @else {
+                        {{ formatMoney(absMoney(item.difference)) }} {{ t('dash.belowAvg') }}
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
         </div>
-      </div>
+      }
     </section>
 
     <div class="divider"></div>
@@ -151,6 +186,7 @@
                   <div class="bar-value">{{ formatMoney(bar.value) }}</div>
                   <div class="bar" [class.bar-current]="bar.isCurrent" [style.height.%]="(bar.value / historyMax()) * 100"></div>
                   <div class="bar-label">{{ bar.label }}</div>
+                  <div class="bar-year">{{ bar.year }}</div>
                 </div>
               }
             </div>

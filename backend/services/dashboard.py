@@ -201,6 +201,7 @@ def build_dashboard(month: str | None = None, scope: str = "month") -> dict:
             "month": _totals(cur_month_start, cur_month_end),
             "year": _totals(year_start, year_end),
         },
+        "recap_totals": _totals(recap_start, recap_end),
         "category_breakdown": _category_breakdown(recap_start, recap_end),
         "category_comparison": _category_comparison(recap_start, recap_end),
         "month_comparison": _month_comparison(year, month_no),

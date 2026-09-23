@@ -51,6 +51,14 @@ describe('CategoriesPageComponent', () => {
     expect(el.textContent).toContain('2');
   });
 
+  it('should render the actions column header above the action buttons', () => {
+    const fixture = TestBed.createComponent(CategoriesPageComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('thead th.actions')?.textContent).toBe('Actions');
+    expect(el.querySelector('tbody td.actions button')).toBeTruthy();
+  });
+
   it('should show the create form when "New category" is clicked', () => {
     const fixture = TestBed.createComponent(CategoriesPageComponent);
     fixture.detectChanges();

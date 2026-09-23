@@ -12,6 +12,7 @@ function sampleSummary(): DashboardSummary {
       month: { income: '2500.00', expenses: '620.00', balance: '1880.00' },
       year: { income: '2500.00', expenses: '650.00', balance: '1850.00' },
     },
+    recap_totals: { income: '2500.00', expenses: '620.00', balance: '1880.00' },
     category_breakdown: [
       { category_id: 1, name: 'Rent', color: '#ef4444', total: '500.00' },
       { category_id: 2, name: 'Groceries', color: '#f59e0b', total: '120.00' },
@@ -61,6 +62,42 @@ describe('DashboardPageComponent', () => {
     expect(el.textContent).toContain('620.00');
   });
 
+  it('should render the current period toggle labels', () => {
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('Current Week');
+    expect(el.textContent).toContain('Current Month');
+    expect(el.textContent).toContain('Current Year');
+  });
+
+  it('should expose recap totals', () => {
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    expect(component.recapTotals()).toEqual({ income: '2500.00', expenses: '620.00', balance: '1880.00' });
+  });
+
+  it('should hide recap contents by default and show them on toggle', () => {
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(fixture.componentInstance.recapOpen()).toBe(false);
+    expect(el.querySelector('.recap-totals-head')).toBeNull();
+    expect(el.querySelector('.donut-wrap')).toBeNull();
+    expect(el.querySelector('.cmp-list')).toBeNull();
+    (el.querySelector('.recap-toggle') as HTMLElement).click();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.recapOpen()).toBe(true);
+    expect(el.querySelector('.recap-totals-head')).not.toBeNull();
+    expect(el.querySelector('.donut-wrap')).not.toBeNull();
+    expect(el.querySelector('.cmp-list')).not.toBeNull();
+    (el.querySelector('.recap-toggle') as HTMLElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('.recap-totals-head')).toBeNull();
+    expect(el.querySelector('.donut-wrap')).toBeNull();
+  });
+
   it('should switch period KPIs', () => {
     const fixture = TestBed.createComponent(DashboardPageComponent);
     fixture.detectChanges();
@@ -86,6 +123,8 @@ describe('DashboardPageComponent', () => {
   it('should render the category comparison status', () => {
     const fixture = TestBed.createComponent(DashboardPageComponent);
     fixture.detectChanges();
+    (fixture.nativeElement as HTMLElement).querySelector('.recap-toggle')!.dispatchEvent(new Event('click'));
+    fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('over by 35.00');
   });
@@ -105,6 +144,7 @@ describe('DashboardPageComponent', () => {
           month: { income: '0.00', expenses: '0.00', balance: '0.00' },
           year: { income: '0.00', expenses: '0.00', balance: '0.00' },
         },
+        recap_totals: { income: '0.00', expenses: '0.00', balance: '0.00' },
         category_breakdown: [],
         category_comparison: [],
         month_comparison: {
@@ -119,6 +159,8 @@ describe('DashboardPageComponent', () => {
     );
     const fixture = TestBed.createComponent(DashboardPageComponent);
     fixture.detectChanges();
+    (fixture.nativeElement as HTMLElement).querySelector('.recap-toggle')!.dispatchEvent(new Event('click'));
+    fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('No expenses recorded this month.');
   });
@@ -131,6 +173,18 @@ describe('DashboardPageComponent', () => {
     component.setRecapScope('year');
     fixture.detectChanges();
     expect(service.get).toHaveBeenLastCalledWith({ month: '2026-06', scope: 'year' });
+  });
+
+  it('should show month and full year labels on history bars', () => {
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    const bars = component.historyBars();
+    expect(bars[0].label).toBe('Jul');
+    expect(bars[0].year).toBe('2026');
+    const el = fixture.nativeElement as HTMLElement;
+    const yearLabels = Array.from(el.querySelectorAll('.bar-year'));
+    expect(yearLabels.some((node) => node.textContent === '2026')).toBe(true);
   });
 
   it('should select a month when clicking a history bar', () => {

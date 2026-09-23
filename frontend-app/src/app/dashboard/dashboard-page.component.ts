@@ -25,6 +25,7 @@ export interface MonthBar {
 export interface HistoryBar {
   monthKey: string;
   label: string;
+  year: string;
   value: number;
   isCurrent: boolean;
 }
@@ -50,6 +51,7 @@ export class DashboardPageComponent {
   period = signal<PeriodKey>('month');
   selectedMonth = signal<string>(this.currentMonthKey());
   recapScope = signal<ScopeKey>('month');
+  recapOpen = signal(false);
   readonly periodKeys: PeriodKey[] = ['week', 'month', 'year'];
   readonly scopeKeys: ScopeKey[] = ['month', 'year'];
 
@@ -83,12 +85,25 @@ export class DashboardPageComponent {
     this.recapScope.set(scope);
   }
 
+  toggleRecap(): void {
+    this.recapOpen.update((open) => !open);
+  }
+
   selectMonth(monthKey: string): void {
     this.selectedMonth.set(monthKey);
   }
 
   kpis(): PeriodTotals {
     return this.summary()?.periods[this.period()] ?? EMPTY_PERIOD;
+  }
+
+  recapTotals(): PeriodTotals {
+    return this.summary()?.recap_totals ?? EMPTY_PERIOD;
+  }
+
+  currentPeriodLabel(key: PeriodKey): string {
+    const suffix = key.charAt(0).toUpperCase() + key.slice(1);
+    return this.t('dash.current' + suffix);
   }
 
   pieSegments = computed<PieSegment[]>(() => {
@@ -153,7 +168,8 @@ export class DashboardPageComponent {
       const [year, month] = item.month.split('-');
       return {
         monthKey: item.month,
-        label: `${MONTH_NAMES[Number(month) - 1]} ${year.slice(2)}`,
+        label: MONTH_NAMES[Number(month) - 1],
+        year,
         value: Number(item.total),
         isCurrent: item.month === this.selectedMonth(),
       };

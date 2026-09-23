@@ -109,6 +109,16 @@ describe('TransactionsPageComponent', () => {
     expect(el.textContent).toContain('12.50');
   });
 
+  it('should render the actions column header above the edit/delete buttons', () => {
+    const fixture = TestBed.createComponent(TransactionsPageComponent);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const headers = Array.from(el.querySelectorAll('thead th')).map((th) => th.textContent);
+    expect(headers).toContain('Actions');
+    expect(el.querySelector('thead th.actions')?.textContent).toBe('Actions');
+    expect(el.querySelector('tbody td.actions button')).toBeTruthy();
+  });
+
   it('should default the date to today and filter categories by type', () => {
     const fixture = TestBed.createComponent(TransactionsPageComponent);
     fixture.detectChanges();

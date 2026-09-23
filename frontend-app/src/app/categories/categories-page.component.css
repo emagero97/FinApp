@@ -89,7 +89,11 @@
   text-align: right;
 }
 
-.actions {
+.table th.actions {
+  white-space: nowrap;
+}
+
+.table td.actions {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;

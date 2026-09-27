@@ -146,3 +146,23 @@ def update_transaction(transaction: Transaction, fields: dict) -> Transaction:
 def delete_transaction(transaction: Transaction) -> None:
     db.session.delete(transaction)
     db.session.commit()
+
+
+def delete_transactions(transaction_ids: list[int]) -> int:
+    """Delete several transactions in one statement. Returns the number removed.
+
+    The delete is all-or-nothing: if any id does not exist nothing is removed.
+    """
+    ids = list(dict.fromkeys(transaction_ids))
+    if not ids:
+        return 0
+
+    found = db.session.query(Transaction.id).filter(Transaction.id.in_(ids)).all()
+    if len(found) != len(ids):
+        raise ServiceError(404, {"error": "Transaction not found"})
+
+    deleted = (
+        db.session.query(Transaction).filter(Transaction.id.in_(ids)).delete(synchronize_session=False)
+    )
+    db.session.commit()
+    return deleted

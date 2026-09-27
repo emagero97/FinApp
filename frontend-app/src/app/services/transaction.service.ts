@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
+  BulkDeleteResponse,
   Transaction,
   TransactionInput,
   TransactionListResponse,
@@ -53,5 +54,9 @@ export class TransactionService {
 
   delete(id: number): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
+
+  bulkDelete(ids: number[]): Observable<BulkDeleteResponse> {
+    return this.http.delete<BulkDeleteResponse>(`${this.baseUrl}/bulk`, { body: { ids } });
   }
 }

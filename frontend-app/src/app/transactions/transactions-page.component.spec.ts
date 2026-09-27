@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { defer, of } from 'rxjs';
+import { defer, of, throwError } from 'rxjs';
 import { TransactionsPageComponent } from './transactions-page.component';
 import { CategoryService } from '../services/category.service';
 import { TransactionService } from '../services/transaction.service';
@@ -73,6 +73,20 @@ const sampleTransaction: Transaction = {
   updated_at: '',
 };
 
+const secondTransaction: Transaction = {
+  ...sampleTransaction,
+  id: 11,
+  notes: 'household',
+  amount: '30.00',
+};
+
+const thirdTransaction: Transaction = {
+  ...sampleTransaction,
+  id: 12,
+  notes: 'restaurant',
+  amount: '45.00',
+};
+
 describe('TransactionsPageComponent', () => {
   let categoryService: { list: ReturnType<typeof vi.fn> };
   let transactionService: {
@@ -80,6 +94,7 @@ describe('TransactionsPageComponent', () => {
     create: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
     delete: ReturnType<typeof vi.fn>;
+    bulkDelete: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -89,6 +104,7 @@ describe('TransactionsPageComponent', () => {
       create: vi.fn().mockReturnValue(of(sampleTransaction)),
       update: vi.fn().mockReturnValue(of(sampleTransaction)),
       delete: vi.fn().mockReturnValue(of(null)),
+      bulkDelete: vi.fn().mockReturnValue(of({ deleted: 0 })),
     };
     TestBed.configureTestingModule({
       imports: [TransactionsPageComponent],
@@ -341,5 +357,218 @@ describe('TransactionsPageComponent', () => {
     await new Promise((r) => setTimeout(r, 0));
     fixture.detectChanges();
     expect(fixture.componentInstance.transactions().map((t) => t.notes)).toEqual(['fresh']);
+  });
+
+  describe('delete mode', () => {
+    beforeEach(() => {
+      transactionService.list.mockReturnValue(
+        of({ transactions: [sampleTransaction, secondTransaction, thirdTransaction], total: 3 })
+      );
+      transactionService.bulkDelete.mockReturnValue(of({ deleted: 2 }));
+    });
+
+    it('should hide checkboxes until delete mode is entered', () => {
+      const fixture = TestBed.createComponent(TransactionsPageComponent);
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelectorAll('input.row-check').length).toBe(0);
+      expect(el.querySelector('.selection-bar')).toBeNull();
+      expect(el.querySelector('thead th.actions')?.textContent).toBe('Actions');
+    });
+
+    it('should reveal a checkbox per row and hide the actions column in delete mode', () => {
+      const fixture = TestBed.createComponent(TransactionsPageComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance;
+      component.enterDeleteMode();
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelectorAll('input.row-check').length).toBe(3);
+      expect(el.querySelector('thead th.actions')).toBeNull();
+      expect(el.querySelector('.selection-bar')).toBeTruthy();
+    });
+
+    it('should enter delete mode from the header button', () => {
+      const fixture = TestBed.createComponent(TransactionsPageComponent);
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+      const button = Array.from(el.querySelectorAll('.header-actions button')).find((b) =>
+        (b.textContent ?? '').includes('Select')
+      ) as HTMLButtonElement;
+      button.click();
+      fixture.detectChanges();
+      expect(fixture.componentInstance.deleteMode()).toBe(true);
+    });
+
+    it('should toggle individual rows and track the selected count', () => {
+      const fixture = TestBed.createComponent(TransactionsPageComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance;
+      component.enterDeleteMode();
+      fixture.detectChanges();
+
+      component.toggleSelect(10);
+      component.toggleSelect(12);
+      fixture.detectChanges();
+      expect([...component.selectedIds()]).toEqual([10, 12]);
+      expect(component.selectedCount()).toBe(2);
+      expect(component.isSelected(11)).toBe(false);
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('2 selected');
+
+      component.toggleSelect(10);
+      expect([...component.selectedIds()]).toEqual([12]);
+    });
+
+    it('should mark rows as selected in the DOM', () => {
+      const fixture = TestBed.createComponent(TransactionsPageComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance;
+      component.enterDeleteMode();
+      component.toggleSelect(11);
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+      const boxes = el.querySelectorAll('input.row-check') as NodeListOf<HTMLInputElement>;
+      expect(Array.from(boxes).map((b) => b.checked)).toEqual([false, true, false]);
+      expect(el.querySelectorAll('tr.row-selected').length).toBe(1);
+    });
+
+    it('should select and clear every row with the select all toggle', () => {
+      const fixture = TestBed.createComponent(TransactionsPageComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance;
+      component.enterDeleteMode();
+
+      component.toggleSelectAll();
+      expect(component.selectedCount()).toBe(3);
+      expect(component.allSelected()).toBe(true);
+      expect(component.allMatching()).toBe(true);
+
+      component.toggleSelectAll();
+      expect(component.selectedCount()).toBe(0);
+      expect(component.allMatching()).toBe(false);
+    });
+
+    it('should break the "all matching" shortcut when one row is deselected', () => {
+      const fixture = TestBed.createComponent(TransactionsPageComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance;
+      component.enterDeleteMode();
+      component.toggleSelectAll();
+      component.toggleSelect(10);
+      expect(component.allMatching()).toBe(false);
+      expect([...component.selectedIds()]).toEqual([11, 12]);
+    });
+
+    it('should keep the whole filtered set selected across a reload', () => {
+      const fixture = TestBed.createComponent(TransactionsPageComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance;
+      component.enterDeleteMode();
+      component.toggleSelectAll();
+
+      // A narrower filter returns a different set of rows; all of them stay selected.
+      transactionService.list.mockReturnValue(of({ transactions: [thirdTransaction], total: 1 }));
+      component.filterCategory.set(1);
+      component.load();
+      fixture.detectChanges();
+      expect([...component.selectedIds()]).toEqual([12]);
+    });
+
+    it('should drop selected rows that no longer match the filters', () => {
+      const fixture = TestBed.createComponent(TransactionsPageComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance;
+      component.enterDeleteMode();
+      component.toggleSelect(10);
+      component.toggleSelect(11);
+
+      transactionService.list.mockReturnValue(of({ transactions: [secondTransaction], total: 1 }));
+      component.searchQuery.set('household');
+      component.load();
+      fixture.detectChanges();
+      expect([...component.selectedIds()]).toEqual([11]);
+    });
+
+    it('should confirm before deleting and send the selected ids', () => {
+      const fixture = TestBed.createComponent(TransactionsPageComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance;
+      component.enterDeleteMode();
+      component.toggleSelect(10);
+      component.toggleSelect(12);
+
+      component.requestBulkDelete();
+      fixture.detectChanges();
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+        'Delete selected transactions?'
+      );
+      expect(transactionService.bulkDelete).not.toHaveBeenCalled();
+
+      component.confirmBulkDelete();
+      expect(transactionService.bulkDelete).toHaveBeenCalledWith([10, 12]);
+      expect(component.bulkDeleteTarget()).toBeNull();
+    });
+
+    it('should delete everything the filters match when all rows are selected', () => {
+      const fixture = TestBed.createComponent(TransactionsPageComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance;
+      component.onFilterCategory(1);
+      component.enterDeleteMode();
+      component.toggleSelectAll();
+      component.requestBulkDelete();
+      component.confirmBulkDelete();
+      expect(transactionService.bulkDelete).toHaveBeenCalledWith([10, 11, 12]);
+    });
+
+    it('should not open the confirmation when nothing is selected', () => {
+      const fixture = TestBed.createComponent(TransactionsPageComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance;
+      component.enterDeleteMode();
+      component.requestBulkDelete();
+      expect(component.bulkDeleteTarget()).toBeNull();
+    });
+
+    it('should clear the selection and show a notice after deleting', () => {
+      const fixture = TestBed.createComponent(TransactionsPageComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance;
+      component.enterDeleteMode();
+      component.toggleSelectAll();
+      component.requestBulkDelete();
+      component.confirmBulkDelete();
+      fixture.detectChanges();
+      expect(component.selectedCount()).toBe(0);
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('Deleted 2 transaction(s).');
+    });
+
+    it('should report an error and keep the selection when the delete fails', () => {
+      transactionService.bulkDelete.mockReturnValue(throwError(() => ({ error: { error: 'Nope' } })));
+      const fixture = TestBed.createComponent(TransactionsPageComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance;
+      component.enterDeleteMode();
+      component.toggleSelect(10);
+      component.requestBulkDelete();
+      component.confirmBulkDelete();
+      fixture.detectChanges();
+      expect(component.error()).toBe('Nope');
+      expect(component.selectedCount()).toBe(1);
+      expect(component.bulkDeleting()).toBe(false);
+    });
+
+    it('should discard the selection when leaving delete mode', () => {
+      const fixture = TestBed.createComponent(TransactionsPageComponent);
+      fixture.detectChanges();
+      const component = fixture.componentInstance;
+      component.enterDeleteMode();
+      component.toggleSelect(10);
+      component.exitDeleteMode();
+      fixture.detectChanges();
+      expect(component.deleteMode()).toBe(false);
+      expect(component.selectedCount()).toBe(0);
+      expect((fixture.nativeElement as HTMLElement).querySelector('input.row-check')).toBeNull();
+    });
   });
 });

@@ -30,12 +30,20 @@ export class TransactionsPageComponent {
   editing = signal<Transaction | null>(null);
   saving = signal(false);
   error = signal<string | null>(null);
+  notice = signal<string | null>(null);
   deleteTarget = signal<Transaction | null>(null);
   searchQuery = signal('');
   filterType = signal<string>('');
   filterCategory = signal<number | null>(null);
   filterDateFrom = signal('');
   filterDateTo = signal('');
+  /** Delete mode reveals a checkbox per row so several transactions can be removed at once. */
+  deleteMode = signal(false);
+  selectedIds = signal<Set<number>>(new Set());
+  /** When true the whole filtered result set is selected, so reloads keep it fully selected. */
+  allMatching = signal(false);
+  bulkDeleteTarget = signal<number[] | null>(null);
+  bulkDeleting = signal(false);
 
   private loadSubscription: Subscription | null = null;
 
@@ -109,10 +117,33 @@ export class TransactionsPageComponent {
     }
     this.loadSubscription?.unsubscribe();
     this.loadSubscription = this.transactionService.list(query).subscribe({
-      next: (res) => this.transactions.set(res.transactions),
-      error: () => this.transactions.set([]),
+      next: (res) => {
+        this.transactions.set(res.transactions);
+        this.reconcileSelection(res.transactions);
+      },
+      error: () => {
+        this.transactions.set([]);
+        this.reconcileSelection([]);
+      },
       complete: () => this.loading.set(false),
     });
+  }
+
+  /**
+   * Keep the selection in sync with the rows currently displayed. In "all matching"
+   * mode every row is (re)selected so the selection follows the active filters;
+   * otherwise rows that no longer match the filters are dropped.
+   */
+  private reconcileSelection(rows: Transaction[]): void {
+    if (!this.deleteMode()) {
+      return;
+    }
+    if (this.allMatching()) {
+      this.selectedIds.set(new Set(rows.map((row) => row.id)));
+      return;
+    }
+    const visible = new Set(rows.map((row) => row.id));
+    this.selectedIds.set(new Set([...this.selectedIds()].filter((id) => visible.has(id))));
   }
 
   startCreate(): void {
@@ -220,6 +251,97 @@ export class TransactionsPageComponent {
     }
     this.deleteTarget.set(null);
     this.transactionService.delete(target.id).subscribe(() => this.load());
+  }
+
+  enterDeleteMode(): void {
+    this.error.set(null);
+    this.notice.set(null);
+    this.deleteMode.set(true);
+    this.clearSelection();
+  }
+
+  exitDeleteMode(): void {
+    this.deleteMode.set(false);
+    this.bulkDeleteTarget.set(null);
+    this.clearSelection();
+  }
+
+  private clearSelection(): void {
+    this.selectedIds.set(new Set());
+    this.allMatching.set(false);
+  }
+
+  isSelected(id: number): boolean {
+    return this.selectedIds().has(id);
+  }
+
+  selectedCount(): number {
+    return this.selectedIds().size;
+  }
+
+  /** True when every visible row is selected. */
+  allSelected(): boolean {
+    const rows = this.transactions();
+    return rows.length > 0 && rows.every((row) => this.selectedIds().has(row.id));
+  }
+
+  toggleSelect(id: number): void {
+    const next = new Set(this.selectedIds());
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    // Deselecting a single row breaks the "everything matches" shortcut.
+    if (!next.has(id)) {
+      this.allMatching.set(false);
+    }
+    this.selectedIds.set(next);
+  }
+
+  toggleSelectAll(): void {
+    if (this.allSelected()) {
+      this.clearSelection();
+      return;
+    }
+    this.selectedIds.set(new Set(this.transactions().map((row) => row.id)));
+    this.allMatching.set(true);
+  }
+
+  requestBulkDelete(): void {
+    const ids = [...this.selectedIds()];
+    if (ids.length === 0) {
+      return;
+    }
+    this.bulkDeleteTarget.set(ids);
+  }
+
+  dismissBulkDelete(): void {
+    this.bulkDeleteTarget.set(null);
+  }
+
+  confirmBulkDelete(): void {
+    const ids = this.bulkDeleteTarget();
+    if (!ids || ids.length === 0) {
+      return;
+    }
+    this.bulkDeleteTarget.set(null);
+    this.bulkDeleting.set(true);
+    this.error.set(null);
+    this.notice.set(null);
+    this.transactionService.bulkDelete(ids).subscribe({
+      next: (res) => {
+        this.bulkDeleting.set(false);
+        this.notice.set(this.t('tx.bulkDeleteDone', { count: res?.deleted ?? ids.length }));
+        this.clearSelection();
+        this.load();
+      },
+      error: (err) => {
+        this.bulkDeleting.set(false);
+        this.error.set(err?.error?.errors?.ids ?? err?.error?.error ?? this.t('tx.bulkDeleteFailed'));
+        this.load();
+      },
+    });
   }
 
   formatAmount(value: string): string {

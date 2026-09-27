@@ -34,3 +34,7 @@ export interface TransactionListResponse {
   transactions: Transaction[];
   total: number;
 }
+
+export interface BulkDeleteResponse {
+  deleted: number;
+}

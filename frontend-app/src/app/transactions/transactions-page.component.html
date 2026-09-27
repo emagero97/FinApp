@@ -2,6 +2,22 @@
   <header class="page-header">
     <h1>{{ t('nav.transactions') }}</h1>
     <span class="muted">{{ t('tx.tagline') }}</span>
+    <div class="header-actions">
+      @if (deleteMode()) {
+        <button type="button" class="btn btn-sm" (click)="exitDeleteMode()">
+          {{ t('tx.exitDeleteMode') }}
+        </button>
+      } @else {
+        <button
+          type="button"
+          class="btn btn-sm"
+          [disabled]="transactions().length === 0"
+          (click)="enterDeleteMode()"
+        >
+          {{ t('tx.enterDeleteMode') }}
+        </button>
+      }
+    </div>
   </header>
 
   <form class="entry-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
@@ -138,6 +154,37 @@
     }
   </section>
 
+  @if (notice()) {
+    <p class="form-success">{{ notice() }}</p>
+  }
+
+  @if (deleteMode()) {
+    <section class="selection-bar">
+      <div class="selection-info">
+        <strong>{{ t('tx.selectedCount', { count: selectedCount() }) }}</strong>
+        <span class="muted">{{ t('tx.deleteModeHint') }}</span>
+      </div>
+      <div class="selection-actions">
+        <button
+          type="button"
+          class="btn btn-sm"
+          [disabled]="transactions().length === 0"
+          (click)="toggleSelectAll()"
+        >
+          {{ allSelected() ? t('tx.selectNone') : t('tx.selectAll') }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm btn-danger"
+          [disabled]="selectedCount() === 0 || bulkDeleting()"
+          (click)="requestBulkDelete()"
+        >
+          {{ t('tx.bulkDelete') }}
+        </button>
+      </div>
+    </section>
+  }
+
   <section class="list">
     @if (loading()) {
       <p class="muted">{{ t('tx.loading') }}</p>
@@ -147,17 +194,32 @@
       <table class="table">
         <thead>
           <tr>
+            @if (deleteMode()) {
+              <th class="select-col"></th>
+            }
             <th>{{ t('tx.date') }}</th>
             <th>{{ t('tx.type') }}</th>
             <th>{{ t('tx.category') }}</th>
             <th class="num">{{ t('tx.amount') }}</th>
             <th>{{ t('tx.notes') }}</th>
-            <th class="actions">{{ t('tx.actions') }}</th>
+            @if (!deleteMode()) {
+              <th class="actions">{{ t('tx.actions') }}</th>
+            }
           </tr>
         </thead>
         <tbody>
           @for (transaction of transactions(); track transaction.id) {
-            <tr>
+            <tr [class.row-selected]="isSelected(transaction.id)">
+              @if (deleteMode()) {
+                <td class="select-col">
+                  <input
+                    class="row-check"
+                    type="checkbox"
+                    [checked]="isSelected(transaction.id)"
+                    (change)="toggleSelect(transaction.id)"
+                  />
+                </td>
+              }
               <td>{{ transaction.date }}</td>
               <td>
                 <span class="badge" [class.badge-income]="transaction.type === 'income'">
@@ -169,12 +231,16 @@
                 {{ transaction.type === 'income' ? '+' : '−' }}{{ formatAmount(transaction.amount) }}
               </td>
               <td class="notes-cell">{{ transaction.notes || '—' }}</td>
-              <td class="actions">
-                <button type="button" class="btn btn-sm" (click)="startEdit(transaction)">{{ t('tx.edit') }}</button>
-                <button type="button" class="btn btn-sm btn-danger" (click)="requestDelete(transaction)">
-                  {{ t('tx.delete') }}
-                </button>
-              </td>
+              @if (!deleteMode()) {
+                <td class="actions">
+                  <button type="button" class="btn btn-sm" (click)="startEdit(transaction)">
+                    {{ t('tx.edit') }}
+                  </button>
+                  <button type="button" class="btn btn-sm btn-danger" (click)="requestDelete(transaction)">
+                    {{ t('tx.delete') }}
+                  </button>
+                </td>
+              }
             </tr>
           }
         </tbody>
@@ -197,5 +263,16 @@
     [dangerous]="true"
     (confirmed)="confirmDelete()"
     (dismissed)="deleteTarget.set(null)"
+  ></app-confirm-dialog>
+}
+
+@if (bulkDeleteTarget(); as ids) {
+  <app-confirm-dialog
+    title="{{ t('tx.bulkDeleteQuestion') }}"
+    [message]="t('tx.bulkDeleteMsg', { count: ids.length })"
+    confirmLabel="{{ t('tx.bulkDelete') }}"
+    [dangerous]="true"
+    (confirmed)="confirmBulkDelete()"
+    (dismissed)="dismissBulkDelete()"
   ></app-confirm-dialog>
 }

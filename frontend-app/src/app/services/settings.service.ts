@@ -89,6 +89,19 @@ const DICTIONARY: Record<Language, Record<string, string>> = {
     'tx.deleteMsg':
       'Are you sure you want to delete this {type} of {amount} on {date}? This action cannot be undone.',
     'tx.actions': 'Actions',
+    'tx.deleteMode': 'Delete mode',
+    'tx.deleteModeHint': 'Select the transactions you want to delete, then confirm.',
+    'tx.enterDeleteMode': 'Select',
+    'tx.exitDeleteMode': 'Cancel selection',
+    'tx.selectedCount': '{count} selected',
+    'tx.selectAll': 'Select all',
+    'tx.selectNone': 'Select none',
+    'tx.bulkDelete': 'Delete selected',
+    'tx.bulkDeleteQuestion': 'Delete selected transactions?',
+    'tx.bulkDeleteMsg':
+      'You are about to delete {count} transaction(s) matching the current filters. This action cannot be undone.',
+    'tx.bulkDeleteDone': 'Deleted {count} transaction(s).',
+    'tx.bulkDeleteFailed': 'Could not delete the selected transactions. Please try again.',
 
     'export.header': 'Export',
     'export.tagline': 'Extract your transactions to a CSV file.',
@@ -310,6 +323,19 @@ const DICTIONARY: Record<Language, Record<string, string>> = {
     'tx.deleteMsg':
       'Vuoi eliminare questa transazione di {type} di {amount} il {date}? Questa azione non può essere annullata.',
     'tx.actions': 'Azioni',
+    'tx.deleteMode': 'Modalità eliminazione',
+    'tx.deleteModeHint': 'Seleziona le transazioni da eliminare, poi conferma.',
+    'tx.enterDeleteMode': 'Seleziona',
+    'tx.exitDeleteMode': 'Annulla selezione',
+    'tx.selectedCount': '{count} selezionate',
+    'tx.selectAll': 'Seleziona tutte',
+    'tx.selectNone': 'Deseleziona tutte',
+    'tx.bulkDelete': 'Elimina selezionate',
+    'tx.bulkDeleteQuestion': 'Eliminare le transazioni selezionate?',
+    'tx.bulkDeleteMsg':
+      'Stai per eliminare {count} transazioni che corrispondono ai filtri attuali. Questa azione non può essere annullata.',
+    'tx.bulkDeleteDone': 'Eliminate {count} transazioni.',
+    'tx.bulkDeleteFailed': 'Impossibile eliminare le transazioni selezionate. Riprova.',
 
     'export.header': 'Esporta',
     'export.tagline': 'Estrai le tue transazioni in un file CSV.',

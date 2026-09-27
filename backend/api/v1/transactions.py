@@ -67,3 +67,18 @@ def delete_transaction(transaction_id: int):
     transaction = transaction_service.get_transaction(transaction_id)
     transaction_service.delete_transaction(transaction)
     return "", 204
+
+
+@bp.delete("/bulk")
+def bulk_delete_transactions():
+    try:
+        data = parse_json_body(request)
+    except ValueError as exc:
+        return jsonify({"errors": {"body": str(exc)}}), 400
+
+    ids = data.get("ids")
+    if not isinstance(ids, list) or not all(isinstance(i, int) for i in ids):
+        return jsonify({"errors": {"ids": "ids must be a list of integers"}}), 400
+
+    deleted = transaction_service.delete_transactions(ids)
+    return jsonify({"deleted": deleted})

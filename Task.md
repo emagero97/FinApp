@@ -24,6 +24,40 @@ The data-entry form should include:
 * **Date:** the transaction date, set to today by default
 * **Notes:** a short comment providing additional details about the transaction
 
+## Bulk Deletion (done? y)
+
+The transactions page must provide a delete mode that allows several transactions to be removed in a single operation, instead of deleting them one by one.
+
+### Delete Mode
+
+* A control must be available to enter and leave delete mode.
+* While delete mode is active, each row must expose a checkbox, and the per-row actions must be hidden to avoid mixing selection with editing or single deletion.
+* The interface must display how many transactions are currently selected.
+* The user must be able to select all transactions, or clear the selection.
+* Leaving delete mode must discard the selection without deleting anything.
+
+### Selection with Filters
+
+* The existing filters (type, category, date range, search) must remain usable while in delete mode.
+* Selecting all transactions must select every transaction matching the active filters, so a category or date-range filter can be used to narrow down the selection.
+* When the filters change, the selection must follow them: transactions that no longer match are removed from the selection, and newly matching ones are added when the whole filtered set was selected.
+* Deselecting a single transaction must reduce the selection to the explicit set of remaining transactions.
+
+### Confirmation
+
+* Deleting a selection must always be preceded by a confirmation message stating how many transactions are about to be removed.
+* The confirmation must state that the deletion cannot be undone.
+* After a successful deletion the interface must report how many transactions were removed and the list must be refreshed.
+* If the deletion fails, the selection must be preserved and the error must be displayed.
+
+### Data Integrity Rules
+
+* The deletion must be applied in a single backend operation, not as a sequence of individual requests.
+* The deletion must be all-or-nothing: if any identifier does not exist, nothing must be deleted.
+* Only the transactions matching the current selection may be deleted; transactions excluded by the filters or left unselected must not be affected.
+* The backend must validate the request payload and reject malformed input rather than deleting an arbitrary set of rows.
+* Per-row editing and single deletion must keep working unchanged when delete mode is inactive.
+
 
 
 ## Export (done? y)

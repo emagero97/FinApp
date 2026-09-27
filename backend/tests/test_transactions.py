@@ -154,6 +154,67 @@ def test_delete_transaction(client, expense_category):
         assert db.session.get(Transaction, created["id"]) is None
 
 
+def test_bulk_delete_transactions(client, expense_category, income_category):
+    ids = [
+        _create(client, category_id=expense_category, notes="a").get_json()["id"],
+        _create(client, category_id=expense_category, notes="b").get_json()["id"],
+        _create(client, category_id=income_category, type="income", notes="c").get_json()["id"],
+    ]
+
+    res = client.delete("/api/transactions/bulk", json={"ids": ids[:2]})
+    assert res.status_code == 200
+    assert res.get_json() == {"deleted": 2}
+
+    remaining = client.get("/api/transactions").get_json()
+    assert remaining["total"] == 1
+    assert remaining["transactions"][0]["notes"] == "c"
+
+
+def test_bulk_delete_all_transactions(client, expense_category):
+    ids = [
+        _create(client, category_id=expense_category, notes="a").get_json()["id"],
+        _create(client, category_id=expense_category, notes="b").get_json()["id"],
+    ]
+
+    res = client.delete("/api/transactions/bulk", json={"ids": ids})
+    assert res.status_code == 200
+    assert res.get_json() == {"deleted": 2}
+    assert client.get("/api/transactions").get_json()["total"] == 0
+
+
+def test_bulk_delete_ignores_duplicate_ids(client, expense_category):
+    tx_id = _create(client, category_id=expense_category).get_json()["id"]
+
+    res = client.delete("/api/transactions/bulk", json={"ids": [tx_id, tx_id]})
+    assert res.status_code == 200
+    assert res.get_json() == {"deleted": 1}
+
+
+def test_bulk_delete_with_empty_list_is_a_noop(client, expense_category):
+    _create(client, category_id=expense_category)
+
+    res = client.delete("/api/transactions/bulk", json={"ids": []})
+    assert res.status_code == 200
+    assert res.get_json() == {"deleted": 0}
+    assert client.get("/api/transactions").get_json()["total"] == 1
+
+
+def test_bulk_delete_missing_ids_deletes_nothing(client, expense_category):
+    tx_id = _create(client, category_id=expense_category).get_json()["id"]
+
+    res = client.delete("/api/transactions/bulk", json={"ids": [tx_id, 9999]})
+    assert res.status_code == 404
+    with client.application.app_context():
+        assert db.session.get(Transaction, tx_id) is not None
+
+
+def test_bulk_delete_rejects_invalid_payload(client):
+    assert client.delete("/api/transactions/bulk", json={}).status_code == 400
+    assert client.delete("/api/transactions/bulk", json={"ids": "1,2"}).status_code == 400
+    assert client.delete("/api/transactions/bulk", json={"ids": [1, "2"]}).status_code == 400
+    assert client.delete("/api/transactions/bulk", json={"ids": [1.5]}).status_code == 400
+
+
 def test_list_transactions_with_filters(client, expense_category, income_category):
     _create(client, category_id=expense_category, amount=10.00, date="2026-07-01")
     _create(client, category_id=expense_category, amount=20.00, date="2026-07-20")

@@ -64,4 +64,15 @@ describe('TransactionService', () => {
     expect(req.request.method).toBe('DELETE');
     req.flush(null);
   });
+
+  it('should bulk delete transactions by id', () => {
+    service.bulkDelete([3, 7, 9]).subscribe((res) => {
+      expect(res.deleted).toBe(3);
+    });
+
+    const req = httpMock.expectOne('/api/transactions/bulk');
+    expect(req.request.method).toBe('DELETE');
+    expect(req.request.body).toEqual({ ids: [3, 7, 9] });
+    req.flush({ deleted: 3 });
+  });
 });

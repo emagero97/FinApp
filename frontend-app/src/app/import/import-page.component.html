@@ -52,26 +52,106 @@
           <dd class="rows">{{ preview.total }}</dd>
         </div>
         <div>
+          <dt>{{ t('imp.toAssign') }}</dt>
+          <dd class="rows">{{ pendingRows().length }}</dd>
+        </div>
+        <div>
           <dt>{{ t('imp.invalid') }}</dt>
           <dd class="rows">{{ preview.invalid }}</dd>
         </div>
       </dl>
 
-      <div class="panel-group">
-        <span class="group-title">{{ t('imp.newCategories') }}</span>
-        @if (preview.new_categories.length > 0) {
-          <ul class="category-tags">
-            @for (category of preview.new_categories; track category.name + '-' + category.type) {
-              <li>
-                <span class="tag-name">{{ category.name }}</span>
-                <span class="tag-type tag-{{ category.type }}">{{ categoryType(category) }}</span>
+      @if (pendingRows().length > 0) {
+        <div class="panel-group">
+          <span class="group-title">{{ t('imp.assignCategories') }}</span>
+          <p class="hint">{{ t('imp.assignHint') }}</p>
+
+          @if (unassignedCount() > 0) {
+            <p class="form-error">{{ t('imp.assignPending', { count: unassignedCount() }) }}</p>
+          }
+
+          <div class="bulk-row">
+            @for (type of assignableTypes; track type) {
+              @if (groupsOfType(type).length > 0) {
+                <label class="bulk-field">
+                  <span class="muted">{{ applyToAllLabel(type) }}</span>
+                  <select (change)="applyExistingToAll(type, $any($event.target).value)">
+                    <option value="">{{ t('imp.assignPlaceholder') }}</option>
+                    @for (option of categoriesFor(type); track option.id) {
+                      <option [value]="option.id">{{ option.name }}</option>
+                    }
+                  </select>
+                </label>
+              }
+            }
+          </div>
+
+          <ul class="assign-list">
+            @for (group of groups(); track group.key) {
+              <li class="assign-row">
+                <div class="assign-meta">
+                  <strong>{{ groupLinesLabel(group) }}</strong>
+                  <span>{{ groupDatesLabel(group) }}</span>
+                  <span class="tag-type tag-{{ group.type }}">{{ typeLabel(group.type) }}</span>
+                  <span class="assign-amount">{{ formatAmount(groupTotal(group)) }}</span>
+                  @if (group.notes) {
+                    <span class="muted">{{ group.notes }}</span>
+                  }
+                  @if (group.category) {
+                    <span class="tag-file-category">{{ fileCategoryLabel(group.category) }}</span>
+                  }
+                  @if (group.rows.length > 1) {
+                    <span class="tag-count">{{ groupCountLabel(group) }}</span>
+                  }
+                </div>
+                <div class="assign-controls">
+                  <select
+                    [attr.aria-label]="t('imp.assignExisting')"
+                    [value]="selectedCategoryId(group.key) ?? ''"
+                    (change)="setExistingChoice(group.key, $any($event.target).value)"
+                  >
+                    <option value="">{{ t('imp.assignPlaceholder') }}</option>
+                    @for (option of categoriesFor(group.type); track option.id) {
+                      <option [value]="option.id">{{ categoryOptionLabel(option, group) }}</option>
+                    }
+                  </select>
+                  <input
+                    type="text"
+                    [value]="draftFor(group.key)"
+                    [attr.aria-label]="t('imp.assignNewPlaceholder')"
+                    [placeholder]="t('imp.assignNewPlaceholder')"
+                    (input)="setDraft(group.key, $any($event.target).value)"
+                  />
+                  <button
+                    type="button"
+                    class="btn btn-sm"
+                    [disabled]="!draftFor(group.key).trim()"
+                    (click)="confirmNewChoice(group.key)"
+                  >
+                    {{ t('imp.assignCreate') }}
+                  </button>
+                </div>
+                <p class="assign-status">
+                  @if (choiceFor(group.key); as choice) {
+                    @if (choice.kind === 'new') {
+                      <span class="assign-new">{{ t('imp.assignWillCreate', { name: choice.name }) }}</span>
+                    } @else {
+                      <span class="muted">
+                        {{ t('imp.assignUses', { name: assignedCategoryName(group.key) ?? '' }) }}
+                      </span>
+                    }
+                    <button type="button" class="link-btn" (click)="clearChoice(group.key)">
+                      {{ t('imp.assignClear') }}
+                    </button>
+                  } @else {
+                    <span class="form-error">{{ t('imp.assignMissing') }}</span>
+                  }
+                </p>
               </li>
             }
           </ul>
-        } @else {
-          <span class="muted">{{ t('imp.noNewCategories') }}</span>
-        }
-      </div>
+        </div>
+      }
 
       <div class="summary-columns">
         <div class="panel-group">
@@ -133,23 +213,12 @@
           <ul class="invalid-list">
             @for (row of preview.invalid_rows; track row.line) {
               <li>
-                <strong>{{ t('imp.line') }} {{ row.line }}:</strong>
+                <strong>{{ t('imp.line', { line: row.line }) }}:</strong>
                 {{ row.errors.join('; ') }}
               </li>
             }
           </ul>
         </div>
-      }
-
-      @if (preview.new_categories.length > 0) {
-        <label class="checkbox">
-          <input type="checkbox" [checked]="createCategories()" (change)="createCategories.set($any($event.target).checked)" />
-          <span>{{ t('imp.createCategories') }}</span>
-        </label>
-        <p class="hint">{{ t('imp.createCategoriesHint') }}</p>
-        @if (!createCategories()) {
-          <p class="form-error">{{ t('imp.blocked') }}</p>
-        }
       }
     </section>
 

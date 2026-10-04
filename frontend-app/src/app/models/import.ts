@@ -3,7 +3,9 @@ export type ImportRowType = 'income' | 'expense';
 export interface ImportRow {
   line: number;
   date: string;
-  category: string;
+  category: string | null;
+  matched: boolean;
+  suggested_category_id: number | null;
   type: ImportRowType;
   amount: number;
   notes: string | null;
@@ -14,9 +16,19 @@ export interface InvalidImportRow {
   errors: string[];
 }
 
-export interface NewImportCategory {
+export interface ImportCategoryOption {
+  id: number;
   name: string;
-  type: ImportRowType;
+}
+
+export type ImportCategoryChoice =
+  | { kind: 'existing'; categoryId: number }
+  | { kind: 'new'; name: string };
+
+export interface ImportCategoryAssignment {
+  line: number;
+  category_id?: number;
+  category?: string;
 }
 
 export interface ImportSummary {
@@ -31,11 +43,13 @@ export interface ImportSummary {
 export interface ImportPreview {
   total: number;
   invalid: number;
+  pending: number;
+  resolved: number;
   rows: ImportRow[];
   invalid_rows: InvalidImportRow[];
-  new_categories: NewImportCategory[];
   summary_months: ImportSummary[];
   summary_years: ImportSummary[];
+  category_options: Record<ImportRowType, ImportCategoryOption[]>;
 }
 
 export interface ImportCommitResult {

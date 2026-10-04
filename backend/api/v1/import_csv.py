@@ -37,6 +37,8 @@ def commit():
     data, error = parse_body(request)
     if error:
         return jsonify(error[0]), error[1]
-    create_categories = bool(data.get("create_categories"))
-    payload = csv_import_service.commit(data["content"], create_categories)
+    assignments = data.get("assignments")
+    if assignments is None:
+        assignments = []
+    payload = csv_import_service.commit(data["content"], assignments)
     return jsonify(payload)

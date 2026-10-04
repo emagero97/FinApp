@@ -183,6 +183,22 @@
   color: var(--danger, #f87171);
 }
 
+.tag-file-category {
+  padding: 0.15rem 0.5rem;
+  border: 1px dashed var(--border, #334155);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: var(--text-muted, #94a3b8);
+}
+
+.tag-count {
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--border, #334155);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: var(--text-muted, #94a3b8);
+}
+
 .summary-columns {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -234,12 +250,102 @@
   gap: 0.25rem;
 }
 
-.checkbox {
+.bulk-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.bulk-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  min-width: 200px;
+}
+
+.assign-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  max-height: 24rem;
+  overflow-y: auto;
+}
+
+.assign-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border, #334155);
+  border-radius: 8px;
+  background: var(--surface-muted, #0f172a);
+}
+
+.assign-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+}
+
+.assign-amount {
+  font-variant-numeric: tabular-nums;
+}
+
+.assign-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.assign-controls select {
+  flex: 1 1 12rem;
+  min-width: 10rem;
+}
+
+.assign-controls input {
+  flex: 1 1 10rem;
+  min-width: 8rem;
+  height: 2.15rem;
+  padding: 0 0.6rem;
+  border: 1px solid var(--border, #334155);
+  border-radius: 8px;
+  background: var(--surface, #1e293b);
+  color: var(--text, #e2e8f0);
+  font-family: inherit;
+  font-size: 0.85rem;
+}
+
+.assign-status {
+  margin: 0;
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+}
+
+.assign-new {
+  color: var(--primary, #818cf8);
+}
+
+.link-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--text-muted, #94a3b8);
+  font-family: inherit;
+  font-size: 0.8rem;
+  text-decoration: underline;
   cursor: pointer;
-  font-size: 0.95rem;
+}
+
+.link-btn:hover {
+  color: var(--text, #e2e8f0);
 }
 
 .actions {

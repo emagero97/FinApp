@@ -1,7 +1,11 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ImportCommitResult, ImportPreview } from '../models/import';
+import {
+  ImportCategoryAssignment,
+  ImportCommitResult,
+  ImportPreview,
+} from '../models/import';
 
 @Injectable({ providedIn: 'root' })
 export class ImportService {
@@ -12,10 +16,13 @@ export class ImportService {
     return this.http.post<ImportPreview>(this.baseUrl, { content });
   }
 
-  commit(content: string, createCategories: boolean): Observable<ImportCommitResult> {
+  commit(
+    content: string,
+    assignments: ImportCategoryAssignment[] = [],
+  ): Observable<ImportCommitResult> {
     return this.http.post<ImportCommitResult>(`${this.baseUrl}/commit`, {
       content,
-      create_categories: createCategories,
+      assignments,
     });
   }
 }

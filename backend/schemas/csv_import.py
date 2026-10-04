@@ -9,6 +9,8 @@ ALIASES = {
     "notes": ("note", "notes"),
 }
 
+OPTIONAL_COLUMNS = ("category",)
+
 
 class CsvParseError(ValueError):
     """Raised when the CSV file cannot be parsed as a whole."""
@@ -48,6 +50,8 @@ def parse_csv_rows(text: str) -> tuple[list[dict], list[dict]]:
 
     valid_rows are dicts of {line, date, category, amount, type, notes};
     invalid_rows are dicts of {line, errors} for rows that fail row-level checks.
+    Rows without a category are valid: category is None and the client must
+    assign one before committing.
     Raises CsvParseError for structural problems (empty file, missing columns).
     """
     text = text.lstrip("\ufeff")
@@ -60,7 +64,7 @@ def parse_csv_rows(text: str) -> tuple[list[dict], list[dict]]:
         raise CsvParseError("The file is empty")
 
     mapping = _map_columns(rows[0])
-    missing = [field for field in ALIASES if field not in mapping]
+    missing = [field for field in ALIASES if field not in mapping and field not in OPTIONAL_COLUMNS]
     if missing:
         raise CsvParseError(f"Missing required columns: {', '.join(missing)}")
 
@@ -70,18 +74,15 @@ def parse_csv_rows(text: str) -> tuple[list[dict], list[dict]]:
         errors: list[str] = []
 
         date_cell = _cell(row, mapping["date"])
-        category_cell = _cell(row, mapping["category"])
         amount_cell = _cell(row, mapping["amount"])
         notes_cell = _cell(row, mapping["notes"])
+        category_cell = _cell(row, mapping["category"]) if "category" in mapping else ""
 
         try:
             tx_date = date.fromisoformat(date_cell)
         except ValueError:
             tx_date = None
             errors.append("Date must use the format YYYY-MM-DD")
-
-        if not category_cell:
-            errors.append("Category is required")
 
         try:
             amount = round(float(amount_cell.replace(",", ".")), 2)
@@ -99,7 +100,7 @@ def parse_csv_rows(text: str) -> tuple[list[dict], list[dict]]:
             {
                 "line": index,
                 "date": tx_date,
-                "category": category_cell,
+                "category": category_cell or None,
                 "amount": amount,
                 "type": "income" if amount > 0 else "expense",
                 "notes": notes_cell or None,

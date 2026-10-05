@@ -56,5 +56,7 @@ export interface ImportPreview {
 
 export interface ImportCommitResult {
   inserted: number;
+  /** Rows skipped because the same category, day and amount was already stored. */
+  duplicates: number;
   categories_created: string[];
 }

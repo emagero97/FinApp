@@ -114,6 +114,12 @@
   font-weight: 500;
 }
 
+.form-warning {
+  margin: 0;
+  color: var(--warning, #fbbf24);
+  font-size: 0.9rem;
+}
+
 .summary {
   gap: 0.9rem;
 }

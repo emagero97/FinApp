@@ -1,4 +1,5 @@
 import pytest
+from datetime import date
 
 from backend.extensions import db
 from backend.models import Category, Transaction
@@ -778,3 +779,158 @@ def test_commit_rejects_an_assignment_with_a_non_string_note(client):
     tx_count, cat_count = _count_tables(client.application)
     assert tx_count == 0
     assert cat_count == 0
+
+
+def _store_transaction(app, category_id, type_, amount, when, notes="already there"):
+    with app.app_context():
+        transaction = Transaction(
+            type=type_,
+            category_id=category_id,
+            amount=amount,
+            date=date.fromisoformat(when),
+            notes=notes,
+        )
+        db.session.add(transaction)
+        db.session.commit()
+        return transaction.id
+
+
+def test_commit_skips_a_transaction_already_present(client, expense_category):
+    _store_transaction(client.application, expense_category, "expense", 40.0, "2026-01-03")
+    csv_text = "data;categoria;importo;note\n2026-01-03;Groceries;-40.0;benzina\n"
+
+    res = _post(client, path="/api/import/commit", content=csv_text)
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["inserted"] == 0
+    assert data["duplicates"] == 1
+
+    tx_count, cat_count = _count_tables(client.application)
+    assert tx_count == 1
+    assert cat_count == 1
+
+    with client.application.app_context():
+        assert db.session.query(Transaction).one().notes == "already there"
+
+
+def test_commit_skips_only_the_transactions_already_present(client, expense_category):
+    _store_transaction(client.application, expense_category, "expense", 40.0, "2026-01-03")
+    csv_text = (
+        "data;categoria;importo;note\n"
+        "2026-01-03;Groceries;-40.0;benzina\n"
+        "2026-01-04;Groceries;-40.0;benzina\n"
+        "2026-01-03;Groceries;-55.0;spesa\n"
+    )
+
+    res = _post(client, path="/api/import/commit", content=csv_text)
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["inserted"] == 2
+    assert data["duplicates"] == 1
+
+
+def test_commit_keeps_the_same_amount_on_another_category(client, expense_category):
+    fuel = _add_category(client.application, "Fuel", "expense")
+    _store_transaction(client.application, expense_category, "expense", 40.0, "2026-01-03")
+    csv_text = (
+        "data;categoria;importo;note\n"
+        "2026-01-03;Groceries;-40.0;benzina\n"
+        "2026-01-03;Fuel;-40.0;benzina\n"
+    )
+
+    res = _post(client, path="/api/import/commit", content=csv_text)
+    data = res.get_json()
+    assert data["inserted"] == 1
+    assert data["duplicates"] == 1
+
+    with client.application.app_context():
+        assert db.session.query(Transaction).filter_by(category_id=fuel).one().amount == 40.0
+
+
+def test_commit_skips_a_transaction_repeated_inside_the_file(client):
+    csv_text = (
+        "data;categoria;importo;note\n"
+        "2026-01-03;;-40.0;benzina\n"
+        "2026-01-03;;-40.0;benzina\n"
+    )
+
+    res = _post(
+        client,
+        path="/api/import/commit",
+        content=csv_text,
+        assignments=[
+            {"line": 2, "category": "Veicoli"},
+            {"line": 3, "category": "Veicoli"},
+        ],
+    )
+    data = res.get_json()
+    assert data["inserted"] == 1
+    assert data["duplicates"] == 1
+    assert data["categories_created"] == ["Veicoli"]
+
+    tx_count, cat_count = _count_tables(client.application)
+    assert tx_count == 1
+    assert cat_count == 1
+
+
+def test_commit_detects_a_duplicate_of_a_category_created_by_the_import(client):
+    _add_category(client.application, "Veicoli", "expense")
+    csv_text = (
+        "data;categoria;importo;note\n"
+        "2026-01-03;;-40.0;\n"
+        "2026-01-03;;-40.0;\n"
+    )
+
+    res = _post(
+        client,
+        path="/api/import/commit",
+        content=csv_text,
+        assignments=[
+            {"line": 2, "category": "veicoli"},
+            {"line": 3, "category": "veicoli"},
+        ],
+    )
+    data = res.get_json()
+    assert data["inserted"] == 1
+    assert data["duplicates"] == 1
+
+
+def test_commit_keeps_an_expense_sharing_the_amount_of_an_income(client, income_category):
+    _store_transaction(client.application, income_category, "income", 500.0, "2026-01-03")
+    _add_category(client.application, "Groceries", "expense")
+    csv_text = "data;categoria;importo;note\n2026-01-03;Groceries;-500.0;spesa\n"
+
+    res = _post(client, path="/api/import/commit", content=csv_text)
+    data = res.get_json()
+    assert data["inserted"] == 1
+    assert data["duplicates"] == 0
+
+
+def test_commit_reports_no_duplicates_on_a_clean_file(client, expense_category):
+    csv_text = "data;categoria;importo;note\n2026-01-03;Groceries;-40.0;benzina\n"
+
+    res = _post(client, path="/api/import/commit", content=csv_text)
+    assert res.get_json()["duplicates"] == 0
+
+
+def test_importing_the_same_file_twice_inserts_nothing_the_second_time(client):
+    csv_text = "data;categoria;importo;note\n2026-01-03;;-40.0;benzina\n"
+    assignments = [{"line": 2, "category": "Veicoli"}]
+
+    first = _post(
+        client, path="/api/import/commit", content=csv_text, assignments=assignments
+    )
+    assert first.get_json()["inserted"] == 1
+    assert first.get_json()["duplicates"] == 0
+
+    second = _post(
+        client, path="/api/import/commit", content=csv_text, assignments=assignments
+    )
+    assert second.status_code == 200
+    assert second.get_json()["inserted"] == 0
+    assert second.get_json()["duplicates"] == 1
+    assert second.get_json()["categories_created"] == []
+
+    tx_count, cat_count = _count_tables(client.application)
+    assert tx_count == 1
+    assert cat_count == 1

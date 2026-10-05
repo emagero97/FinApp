@@ -190,6 +190,8 @@ const DICTIONARY: Record<Language, Record<string, string>> = {
     'imp.confirm': 'Confirm and import',
     'imp.importing': 'Importing…',
     'imp.success': 'Imported {inserted} transactions ({created} categories created).',
+    'imp.duplicates':
+      '{count} transaction(s) were already present (same category, day and amount) and have not been imported again.',
     'imp.error': 'Import failed. Please try again.',
     'imp.typeIncome': 'Income',
     'imp.typeExpense': 'Expense',
@@ -440,6 +442,8 @@ const DICTIONARY: Record<Language, Record<string, string>> = {
     'imp.confirm': 'Conferma e importa',
     'imp.importing': 'Importazione…',
     'imp.success': 'Inserite {inserted} transazioni ({created} categorie create).',
+    'imp.duplicates':
+      '{count} transazioni erano già presenti (stessa categoria, stesso giorno e stesso importo) e non sono state importate di nuovo.',
     'imp.error': 'Importazione non riuscita. Riprova.',
     'imp.typeIncome': 'Entrata',
     'imp.typeExpense': 'Uscita',

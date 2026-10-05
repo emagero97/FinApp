@@ -114,7 +114,9 @@ describe('ImportPageComponent', () => {
   beforeEach(() => {
     importService = {
       preview: vi.fn().mockReturnValue(of(previewResponse)),
-      commit: vi.fn().mockReturnValue(of({ inserted: 2, categories_created: ['Svago', 'Veicoli'] })),
+      commit: vi
+        .fn()
+        .mockReturnValue(of({ inserted: 2, duplicates: 0, categories_created: ['Svago', 'Veicoli'] })),
     };
     TestBed.configureTestingModule({
       imports: [ImportPageComponent],
@@ -594,6 +596,31 @@ describe('ImportPageComponent', () => {
 
     expect(component.canImport()).toBe(false);
     expect(component.unassignedCount()).toBe(1);
+  });
+
+  it('should not warn about duplicates when there are none', () => {
+    const { fixture, component } = setup();
+    component.confirmImport();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.textContent).toContain('Imported 2 transactions');
+    expect(el.textContent).not.toContain('already present');
+  });
+
+  it('should warn about the transactions skipped as already present', () => {
+    importService.commit.mockReturnValue(
+      of({ inserted: 4, duplicates: 3, categories_created: ['Veicoli'] }),
+    );
+    const { fixture, component } = setup();
+    component.confirmImport();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.textContent).toContain('Imported 4 transactions');
+    expect(el.textContent).toContain(
+      '3 transaction(s) were already present (same category, day and amount) and have not been imported again.',
+    );
   });
 
   it('should reset the choices when another file is analyzed', () => {

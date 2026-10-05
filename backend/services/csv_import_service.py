@@ -247,6 +247,23 @@ def _assignment_notes(assignment: dict | None, row: dict) -> str | None:
     return row["notes"]
 
 
+def _signature(category_id: int, when, amount) -> tuple[int, str, float]:
+    """Identity of a transaction: same category, same day and same amount means the same movement."""
+    return (category_id, when.isoformat(), round(float(amount), 2))
+
+
+def _stored_signatures(category_ids: set[int]) -> set[tuple]:
+    """Signatures of the transactions already stored for the given categories."""
+    if not category_ids:
+        return set()
+    rows = (
+        db.session.query(Transaction.category_id, Transaction.date, Transaction.amount)
+        .filter(Transaction.category_id.in_(category_ids))
+        .all()
+    )
+    return {_signature(category_id, when, amount) for category_id, when, amount in rows}
+
+
 def _category_by_id(category_id: int, type_: str) -> Category:
     category = db.session.get(Category, category_id)
     if category is None:
@@ -352,8 +369,8 @@ def commit(content: str, assignments: list[dict] | None = None) -> dict:
 
     index = _category_index()
     created: dict[tuple[str, str], Category] = {}
-    transactions: list[Transaction] = []
 
+    pairs: list[tuple[dict, Category]] = []
     for row in rows:
         assignment = by_line.get(row["line"])
         if assignment is None:
@@ -364,14 +381,25 @@ def commit(content: str, assignments: list[dict] | None = None) -> dict:
             category = _category_for_new_name(
                 assignment["category"], row["type"], index, created
             )
+        pairs.append((row, category))
 
+    stored = _stored_signatures({category.id for _, category in pairs})
+    transactions: list[Transaction] = []
+    duplicates = 0
+
+    for row, category in pairs:
+        signature = _signature(category.id, row["date"], abs(row["amount"]))
+        if signature in stored:
+            duplicates += 1
+            continue
+        stored.add(signature)
         transactions.append(
             Transaction(
                 type=row["type"],
                 category_id=category.id,
                 amount=abs(row["amount"]),
                 date=row["date"],
-                notes=_assignment_notes(assignment, row),
+                notes=_assignment_notes(by_line.get(row["line"]), row),
             )
         )
 
@@ -384,5 +412,6 @@ def commit(content: str, assignments: list[dict] | None = None) -> dict:
 
     return {
         "inserted": len(transactions),
+        "duplicates": duplicates,
         "categories_created": [category.name for category in created.values()],
     }

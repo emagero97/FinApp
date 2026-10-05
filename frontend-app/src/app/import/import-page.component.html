@@ -244,6 +244,9 @@
   @if (result(); as result) {
     <section class="panel">
       <p class="form-success">{{ t('imp.success', successParams(result)) }}</p>
+      @if (result.duplicates > 0) {
+        <p class="form-warning">{{ t('imp.duplicates', { count: result.duplicates }) }}</p>
+      }
       @if (result.categories_created.length > 0) {
         <ul class="category-tags">
           @for (name of result.categories_created; track $index) {

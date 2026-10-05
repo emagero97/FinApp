@@ -298,6 +298,95 @@ describe('ImportPageComponent', () => {
     expect((el.querySelectorAll('.assign-controls input')[0] as HTMLInputElement).value).toBe('');
   });
 
+  it('should prefill the note field with the note found in the file', () => {
+    const { fixture, component } = setup(pendingResponse);
+    const el = fixture.nativeElement as HTMLElement;
+    const key = groupKeyFor(component, 2);
+
+    expect(component.noteFor(key)).toBe('Bowling');
+    expect(component.noteChanged(key)).toBe(false);
+    expect(el.textContent).not.toContain('Replaces the note from the file');
+
+    const notes = el.querySelectorAll<HTMLInputElement>('.assign-note input');
+    expect(notes.length).toBe(3);
+    expect(notes[0].value).toBe('Bowling');
+    expect(notes[2].value).toBe('stipendio');
+  });
+
+  it('should offer an empty note field for rows without a note in the file', () => {
+    const { fixture, component } = setup(groupedResponse);
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(component.noteFor(groupKeyFor(component, 5))).toBe('');
+    expect(el.querySelectorAll<HTMLInputElement>('.assign-note input')[3].value).toBe('');
+  });
+
+  it('should show the note field only for the rows that need a category', () => {
+    const { fixture } = setup(previewResponse);
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelectorAll('.assign-note input').length).toBe(0);
+  });
+
+  it('should apply the note typed for a group to all its rows', () => {
+    const { component } = setup(groupedResponse);
+    const key = groupKeyFor(component, 2);
+    component.setExistingChoice(key, '2');
+    component.setNote(key, '  Cena con amici  ');
+
+    expect(component.noteChanged(key)).toBe(true);
+    expect(component.assignments()).toEqual([
+      { line: 2, category_id: 2, notes: 'Cena con amici' },
+      { line: 3, category_id: 2, notes: 'Cena con amici' },
+    ]);
+  });
+
+  it('should keep the file note when the field is left untouched', () => {
+    const { component } = setup(pendingResponse);
+    const key = groupKeyFor(component, 2);
+    component.setExistingChoice(key, '2');
+    component.setNote(key, 'Bowling');
+
+    expect(component.noteChanged(key)).toBe(false);
+    expect(component.assignments()).toEqual([{ line: 2, category_id: 2 }]);
+  });
+
+  it('should submit an empty note when the user clears the field', () => {
+    const { component } = setup(pendingResponse);
+    const key = groupKeyFor(component, 2);
+    component.setExistingChoice(key, '2');
+    component.setNote(key, '');
+
+    expect(component.assignments()).toEqual([{ line: 2, category_id: 2, notes: '' }]);
+  });
+
+  it('should submit the note together with the new category', () => {
+    const { component } = setup(emptyCategoryResponse);
+    const expenseKey = groupKeyFor(component, 2);
+    const incomeKey = groupKeyFor(component, 3);
+    component.setExistingChoice(expenseKey, '2');
+    component.setNote(incomeKey, 'Stipendio gennaio');
+    component.setDraft(incomeKey, 'Stipendio');
+    component.confirmNewChoice(incomeKey);
+
+    component.confirmImport();
+
+    expect(importService.commit).toHaveBeenCalledWith('csv', [
+      { line: 2, category_id: 2 },
+      { line: 3, category: 'Stipendio', notes: 'Stipendio gennaio' },
+    ]);
+  });
+
+  it('should tell the user when the note replaces the one from the file', () => {
+    const { fixture, component } = setup(pendingResponse);
+    const key = groupKeyFor(component, 2);
+    component.setNote(key, 'Bowling night');
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.textContent).toContain('Replaces the note from the file');
+  });
+
   it('should group rows sharing the same category and notes', () => {
     const { component } = setup(groupedResponse);
 
@@ -511,11 +600,14 @@ describe('ImportPageComponent', () => {
     const { component } = setup(suggestedResponse);
     component.setExistingChoice(groupKeyFor(component, 2), '2');
     component.setDraft(groupKeyFor(component, 3), 'Stipendio');
+    component.setNote(groupKeyFor(component, 2), 'changed');
 
     importService.preview.mockReturnValue(of(suggestedResponse));
     component.runPreview();
 
     expect(component.drafts()).toEqual({});
+    expect(component.noteDrafts()).toEqual({});
+    expect(component.noteFor(groupKeyFor(component, 2))).toBe('Bowling');
     expect(component.selectedCategoryId(groupKeyFor(component, 4))).toBe(1);
     expect(component.unassignedCount()).toBe(2);
   });

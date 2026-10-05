@@ -674,3 +674,107 @@ def test_commit_rejects_malformed_assignments(client):
     tx_count, cat_count = _count_tables(client.application)
     assert tx_count == 0
     assert cat_count == 0
+
+
+def _notes_by_amount(app):
+    with app.app_context():
+        return {float(tx.amount): tx.notes for tx in db.session.query(Transaction).all()}
+
+
+def test_commit_keeps_the_file_note_when_the_assignment_omits_notes(client):
+    csv_text = "data;categoria;importo;note\n2026-01-03;;-40.0;benzina\n"
+    res = _post(
+        client,
+        path="/api/import/commit",
+        content=csv_text,
+        assignments=[{"line": 2, "category": "Veicoli"}],
+    )
+    assert res.status_code == 200
+    assert _notes_by_amount(client.application) == {40.0: "benzina"}
+
+
+def test_commit_stores_the_note_of_the_assignment(client):
+    csv_text = "data;categoria;importo;note\n2026-01-03;;-40.0;benzina\n"
+    res = _post(
+        client,
+        path="/api/import/commit",
+        content=csv_text,
+        assignments=[{"line": 2, "category": "Veicoli", "notes": "  carburante Esso  "}],
+    )
+    assert res.status_code == 200
+    assert _notes_by_amount(client.application) == {40.0: "carburante Esso"}
+
+
+def test_commit_stores_no_note_when_the_assignment_clears_it(client):
+    csv_text = "data;categoria;importo;note\n2026-01-03;;-40.0;benzina\n"
+    res = _post(
+        client,
+        path="/api/import/commit",
+        content=csv_text,
+        assignments=[{"line": 2, "category": "Veicoli", "notes": "   "}],
+    )
+    assert res.status_code == 200
+    assert _notes_by_amount(client.application) == {40.0: None}
+
+
+def test_commit_adds_a_note_to_a_row_without_one(client):
+    csv_text = "data;categoria;importo;note\n2026-01-03;;-40.0;\n"
+    res = _post(
+        client,
+        path="/api/import/commit",
+        content=csv_text,
+        assignments=[{"line": 2, "category": "Veicoli", "notes": "benzina"}],
+    )
+    assert res.status_code == 200
+    assert _notes_by_amount(client.application) == {40.0: "benzina"}
+
+
+def test_commit_applies_the_note_to_every_row_of_the_assignment(client):
+    csv_text = (
+        "data;categoria;importo;note\n"
+        "2026-01-03;;-15.0;\n"
+        "2026-01-04;;-20.0;\n"
+    )
+    res = _post(
+        client,
+        path="/api/import/commit",
+        content=csv_text,
+        assignments=[
+            {"line": 2, "category": "Veicoli", "notes": "carburante"},
+            {"line": 3, "category": "Veicoli", "notes": "carburante"},
+        ],
+    )
+    assert res.status_code == 200
+    assert _notes_by_amount(client.application) == {15.0: "carburante", 20.0: "carburante"}
+
+
+def test_commit_never_rewrites_the_note_of_an_automatically_matched_row(client):
+    _add_category(client.application, "Groceries", "expense")
+    csv_text = (
+        "data;categoria;importo;note\n"
+        "2026-02-10;Groceries;-10.5;soup\n"
+        "2026-02-11;;-20.0;\n"
+    )
+    res = _post(
+        client,
+        path="/api/import/commit",
+        content=csv_text,
+        assignments=[{"line": 3, "category": "Fuel", "notes": "diesel"}],
+    )
+    assert res.status_code == 200
+    assert _notes_by_amount(client.application) == {10.5: "soup", 20.0: "diesel"}
+
+
+def test_commit_rejects_an_assignment_with_a_non_string_note(client):
+    csv_text = "data;categoria;importo;note\n2026-01-03;;-40.0;benzina\n"
+    res = _post(
+        client,
+        path="/api/import/commit",
+        content=csv_text,
+        assignments=[{"line": 2, "category": "Veicoli", "notes": 42}],
+    )
+    assert res.status_code == 400
+    assert "assignments" in res.get_json()["errors"]
+    tx_count, cat_count = _count_tables(client.application)
+    assert tx_count == 0
+    assert cat_count == 0

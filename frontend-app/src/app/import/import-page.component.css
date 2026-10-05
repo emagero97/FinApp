@@ -321,6 +321,30 @@
   font-size: 0.85rem;
 }
 
+.assign-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.assign-note input {
+  flex: 1 1 14rem;
+  min-width: 10rem;
+  height: 2.15rem;
+  padding: 0 0.6rem;
+  border: 1px solid var(--border, #334155);
+  border-radius: 8px;
+  background: var(--surface, #1e293b);
+  color: var(--text, #e2e8f0);
+  font-family: inherit;
+  font-size: 0.85rem;
+}
+
+.note-hint {
+  font-size: 0.75rem;
+}
+
 .assign-status {
   margin: 0;
   display: flex;

@@ -47,6 +47,7 @@ export class ImportPageComponent {
   result = signal<ImportCommitResult | null>(null);
   choices = signal<Record<string, ImportCategoryChoice | undefined>>({});
   drafts = signal<Record<string, string | undefined>>({});
+  noteDrafts = signal<Record<string, string | undefined>>({});
   reading = signal(false);
   analyzing = signal(false);
   committing = signal(false);
@@ -94,6 +95,7 @@ export class ImportPageComponent {
   private resetChoices(): void {
     this.choices.set({});
     this.drafts.set({});
+    this.noteDrafts.set({});
   }
 
   private applySuggestions(): void {
@@ -237,6 +239,24 @@ export class ImportPageComponent {
     this.drafts.update((current) => ({ ...current, [key]: '' }));
   }
 
+  /** Note shown for a group: what the user typed, or the one read from the file. */
+  noteFor(key: string): string {
+    const draft = this.noteDrafts()[key];
+    if (draft !== undefined) {
+      return draft;
+    }
+    return this.groupByKey(key)?.notes ?? '';
+  }
+
+  setNote(key: string, value: string): void {
+    this.noteDrafts.update((current) => ({ ...current, [key]: value }));
+  }
+
+  noteChanged(key: string): boolean {
+    const original = this.groupByKey(key)?.notes ?? '';
+    return this.noteFor(key).trim() !== original.trim();
+  }
+
   applyExistingToAll(type: ImportRowType, value: string): void {
     const groups = this.groupsOfType(type);
     const categoryId = Number(value);
@@ -266,10 +286,13 @@ export class ImportPageComponent {
       if (!choice) {
         return [];
       }
+      const notes = this.noteChanged(group.key)
+        ? { notes: this.noteFor(group.key).trim() }
+        : {};
       return group.rows.map((row) =>
         choice.kind === 'existing'
-          ? { line: row.line, category_id: choice.categoryId }
-          : { line: row.line, category: choice.name },
+          ? { line: row.line, category_id: choice.categoryId, ...notes }
+          : { line: row.line, category: choice.name, ...notes },
       );
     });
   }

@@ -29,6 +29,8 @@ export interface ImportCategoryAssignment {
   line: number;
   category_id?: number;
   category?: string;
+  /** Replaces the note read from the file; an empty string stores no note. */
+  notes?: string;
 }
 
 export interface ImportSummary {

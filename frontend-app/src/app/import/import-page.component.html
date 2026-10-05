@@ -131,6 +131,18 @@
                     {{ t('imp.assignCreate') }}
                   </button>
                 </div>
+                <div class="assign-note">
+                  <input
+                    type="text"
+                    [value]="noteFor(group.key)"
+                    [attr.aria-label]="t('imp.assignNote')"
+                    [placeholder]="t('imp.assignNotePlaceholder')"
+                    (input)="setNote(group.key, $any($event.target).value)"
+                  />
+                  @if (noteChanged(group.key)) {
+                    <span class="note-hint">{{ t('imp.assignNoteOverride') }}</span>
+                  }
+                </div>
                 <p class="assign-status">
                   @if (choiceFor(group.key); as choice) {
                     @if (choice.kind === 'new') {

@@ -183,7 +183,7 @@ def preview(content: str) -> dict:
 
 
 def _assignments_by_line(assignments: object) -> dict[int, dict]:
-    """Validate the per-row category assignments and index them by CSV line."""
+    """Validate the per-row category and note assignments and index them by CSV line."""
     if assignments is None:
         return {}
     if not isinstance(assignments, list):
@@ -216,6 +216,11 @@ def _assignments_by_line(assignments: object) -> dict[int, dict]:
             raise ServiceError(
                 400, {"errors": {"assignments": f"Line {line} has an invalid category name"}}
             )
+        notes = item.get("notes")
+        if notes is not None and not isinstance(notes, str):
+            raise ServiceError(
+                400, {"errors": {"assignments": f"Line {line} has invalid notes"}}
+            )
         name = name.strip() if isinstance(name, str) else ""
         if category_id is None and not name:
             raise ServiceError(
@@ -228,8 +233,18 @@ def _assignments_by_line(assignments: object) -> dict[int, dict]:
                     }
                 },
             )
-        indexed[line] = {"category_id": category_id, "category": name or None}
+        assignment = {"category_id": category_id, "category": name or None}
+        if "notes" in item:
+            assignment["notes"] = notes.strip() or None
+        indexed[line] = assignment
     return indexed
+
+
+def _assignment_notes(assignment: dict | None, row: dict) -> str | None:
+    """Notes typed by the user replace the ones read from the file; omitting them keeps the file value."""
+    if assignment is not None and "notes" in assignment:
+        return assignment["notes"]
+    return row["notes"]
 
 
 def _category_by_id(category_id: int, type_: str) -> Category:
@@ -356,7 +371,7 @@ def commit(content: str, assignments: list[dict] | None = None) -> dict:
                 category_id=category.id,
                 amount=abs(row["amount"]),
                 date=row["date"],
-                notes=row["notes"],
+                notes=_assignment_notes(assignment, row),
             )
         )
 

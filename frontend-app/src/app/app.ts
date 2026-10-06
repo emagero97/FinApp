@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { SettingsService } from './services/settings.service';
+import { APP_VERSION } from './version';
 
 @Component({
   selector: 'app-root',
@@ -11,6 +12,7 @@ import { SettingsService } from './services/settings.service';
 export class App {
   sidebarCollapsed = signal(false);
   readonly settings = inject(SettingsService);
+  readonly version = APP_VERSION;
 
   constructor() {
     this.settings.apply();

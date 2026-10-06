@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { App } from './app';
+import { APP_VERSION } from './version';
 
 describe('App', () => {
   beforeEach(async () => {
@@ -23,6 +24,13 @@ describe('App', () => {
     expect(compiled.querySelector('.brand')?.textContent).toContain('FinApp');
     expect(compiled.querySelector('a[href="/transactions"]')?.textContent).toContain('Transactions');
     expect(compiled.querySelector('a[href="/categories"]')?.textContent).toContain('Categories');
+  });
+
+  it('should render the app version in the sidebar footer', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.sidebar-version')?.textContent?.trim()).toBe(`v${APP_VERSION}`);
   });
 
   it('should toggle the sidebar collapse', () => {

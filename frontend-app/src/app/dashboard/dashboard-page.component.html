@@ -21,18 +21,93 @@
   @if (loading()) {
     <p class="muted">{{ t('tx.loading') }}</p>
   } @else {
-    <section class="kpi-row">
-      <div class="kpi">
-        <span class="kpi-label">{{ t('dash.balance') }}</span>
-        <span class="kpi-value">{{ formatMoney(kpis().balance) }}</span>
+    <section class="kpi-section">
+      <p class="muted kpi-subtitle">{{ kpiSubtitle() }}</p>
+      <div class="kpi-row">
+        <div class="kpi">
+          <span class="kpi-label">{{ t('dash.balance') }}</span>
+          <span class="kpi-value">{{ formatMoney(kpis().balance) }}</span>
+        </div>
+        <div class="kpi kpi-income">
+          <span class="kpi-label">{{ t('dash.income') }}</span>
+          <span class="kpi-value">+{{ formatMoney(kpis().income) }}</span>
+        </div>
+        <div class="kpi kpi-expense">
+          <span class="kpi-label">{{ t('dash.expenses') }}</span>
+          <span class="kpi-value">−{{ formatMoney(kpis().expenses) }}</span>
+        </div>
       </div>
-      <div class="kpi kpi-income">
-        <span class="kpi-label">{{ t('dash.income') }}</span>
-        <span class="kpi-value">+{{ formatMoney(kpis().income) }}</span>
+    </section>
+
+    <div class="divider"></div>
+
+    <section class="grid">
+      <div class="card">
+        <h2>{{ t('dash.last12') }}</h2>
+        <p class="muted">{{ t('dash.last12Sub') }}</p>
+        <p class="muted hint">{{ t('dash.last12Hint') }}</p>
+        @if (historyBars().length === 0) {
+          <p class="muted empty">{{ t('dash.noData') }}</p>
+        } @else {
+          <div class="bars-container">
+            <div class="bars">
+              @for (bar of historyBars(); track bar.monthKey) {
+                <div
+                  class="bar-col bar-clickable"
+                  [class.bar-selected]="bar.isCurrent"
+                  (click)="selectMonth(bar.monthKey)"
+                >
+                  <div class="bar-plot">
+                    <div class="zero-line" [style.top.%]="historyZeroPct()"></div>
+                    <div
+                      class="bar bar-history"
+                      [style.top.%]="historyBarTop(bar)"
+                      [style.height.%]="historyBarHeight(bar)"
+                    ></div>
+                    <div
+                      class="bar-value"
+                      [class.below]="bar.value < 0"
+                      [style.top.%]="
+                        bar.value < 0 ? historyBarTop(bar) + historyBarHeight(bar) : historyBarTop(bar)
+                      "
+                    >
+                      {{ formatMoney(bar.value) }}
+                    </div>
+                  </div>
+                  <div class="bar-axis">
+                    <div class="bar-label">{{ bar.label }}</div>
+                    <div class="bar-year">{{ bar.year }}</div>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
       </div>
-      <div class="kpi kpi-expense">
-        <span class="kpi-label">{{ t('dash.expenses') }}</span>
-        <span class="kpi-value">−{{ formatMoney(kpis().expenses) }}</span>
+
+      <div class="card">
+        <h2>{{ monthVsYearsTitle() }}</h2>
+        <p class="muted">{{ monthVsYearsSubtitle() }}</p>
+        @if (monthBars().length === 0) {
+          <p class="muted empty">{{ t('dash.noData') }}</p>
+        } @else {
+          <div class="bars-container">
+            @if (monthAverage() !== null) {
+              <div class="avg-line" [style.bottom.%]="(monthAverage()! / monthMax()) * 100">
+                <span class="avg-line-label">{{ t('dash.avg') }} {{ formatMoney(monthAverage()!) }}</span>
+              </div>
+            }
+            <div class="bars">
+              @for (bar of monthBars(); track bar.label) {
+                <div class="bar-col">
+                  <div class="bar-value">{{ formatMoney(bar.value) }}</div>
+                  <div class="bar" [class.bar-current]="bar.isCurrent" [style.height.%]="(bar.value / monthMax()) * 100"></div>
+                  <div class="bar-label">{{ bar.label }}</div>
+                </div>
+              }
+            </div>
+          </div>
+        }
       </div>
     </section>
 
@@ -68,24 +143,6 @@
             </button>
           }
         </div>
-
-        <header class="recap-totals-head">
-          <p class="muted recap-totals-subtitle">{{ recapSubtitle() }}</p>
-          <div class="kpi-row kpi-row-compact">
-            <div class="kpi">
-              <span class="kpi-label">{{ t('dash.balance') }}</span>
-              <span class="kpi-value">{{ formatMoney(recapTotals().balance) }}</span>
-            </div>
-            <div class="kpi kpi-income">
-              <span class="kpi-label">{{ t('dash.income') }}</span>
-              <span class="kpi-value">+{{ formatMoney(recapTotals().income) }}</span>
-            </div>
-            <div class="kpi kpi-expense">
-              <span class="kpi-label">{{ t('dash.expenses') }}</span>
-              <span class="kpi-value">−{{ formatMoney(recapTotals().expenses) }}</span>
-            </div>
-          </div>
-        </header>
 
         <div class="grid">
           <div class="card">
@@ -168,57 +225,82 @@
 
     <div class="divider"></div>
 
-    <section class="grid">
-      <div class="card">
-        <h2>{{ t('dash.last12') }}</h2>
-        <p class="muted">{{ t('dash.last12Sub') }}</p>
-        <p class="muted hint">{{ t('dash.last12Hint') }}</p>
-        @if (historyBars().length === 0) {
-          <p class="muted empty">{{ t('dash.noData') }}</p>
-        } @else {
-          <div class="bars-container">
-            <div class="bars">
-              @for (bar of historyBars(); track bar.monthKey) {
-                <div
-                  class="bar-col bar-clickable"
-                  [class.bar-selected]="bar.isCurrent"
-                  (click)="selectMonth(bar.monthKey)"
-                >
-                  <div class="bar-value">{{ formatMoney(bar.value) }}</div>
-                  <div class="bar" [class.bar-current]="bar.isCurrent" [style.height.%]="(bar.value / historyMax()) * 100"></div>
-                  <div class="bar-label">{{ bar.label }}</div>
-                  <div class="bar-year">{{ bar.year }}</div>
-                </div>
-              }
-            </div>
-          </div>
-        }
-      </div>
+    <section class="block">
+      <button
+        type="button"
+        class="recap-toggle"
+        (click)="toggleTransactions()"
+        [attr.aria-expanded]="transactionsOpen()"
+      >
+        <span class="recap-toggle-title">{{ t('dash.viewTransactions') }}</span>
+        <span class="muted recap-toggle-sub">{{ t('dash.viewTransactionsSub', { period: recapSubtitle() }) }}</span>
+        <span class="recap-chevron" [class.open]="transactionsOpen()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m6 9 6 6 6-6"></path>
+          </svg>
+        </span>
+      </button>
 
-      <div class="card">
-        <h2>{{ monthVsYearsTitle() }}</h2>
-        <p class="muted">{{ monthVsYearsSubtitle() }}</p>
-        @if (monthBars().length === 0) {
-          <p class="muted empty">{{ t('dash.noData') }}</p>
-        } @else {
-          <div class="bars-container">
-            @if (monthAverage() !== null) {
-              <div class="avg-line" [style.bottom.%]="(monthAverage()! / monthMax()) * 100">
-                <span class="avg-line-label">{{ t('dash.avg') }} {{ formatMoney(monthAverage()!) }}</span>
+      @if (transactionsOpen()) {
+        <div class="card view-transactions">
+          @if (transactionsLoading()) {
+            <p class="muted">{{ t('tx.loading') }}</p>
+          } @else if (periodTransactions().length === 0) {
+            <p class="muted empty">{{ t('dash.noTransactions') }}</p>
+          } @else {
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>{{ t('tx.date') }}</th>
+                  <th>{{ t('tx.type') }}</th>
+                  <th>{{ t('tx.category') }}</th>
+                  <th class="num">{{ t('tx.amount') }}</th>
+                  <th>{{ t('tx.notes') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (transaction of pagedTransactions(); track transaction.id) {
+                  <tr>
+                    <td>{{ transaction.date }}</td>
+                    <td>
+                      <span class="badge" [class.badge-income]="transaction.type === 'income'">
+                        {{ transaction.type === 'income' ? t('cat.income') : t('cat.expense') }}
+                      </span>
+                    </td>
+                    <td>{{ transaction.category_name || '—' }}</td>
+                    <td class="num amount" [class.amount-income]="transaction.type === 'income'">
+                      {{ transaction.type === 'income' ? '+' : '−' }}{{ formatMoney(transaction.amount) }}
+                    </td>
+                    <td class="notes-cell">{{ transaction.notes || '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+
+            @if (totalPages() > 1) {
+              <div class="pager">
+                <button
+                  type="button"
+                  class="pager-btn"
+                  [disabled]="txPage() === 1"
+                  (click)="setTxPage(txPage() - 1)"
+                >
+                  {{ t('dash.prevPage') }}
+                </button>
+                <span class="pager-info">{{ t('dash.pageInfo', { page: txPage(), total: totalPages() }) }}</span>
+                <button
+                  type="button"
+                  class="pager-btn"
+                  [disabled]="txPage() === totalPages()"
+                  (click)="setTxPage(txPage() + 1)"
+                >
+                  {{ t('dash.nextPage') }}
+                </button>
               </div>
             }
-            <div class="bars">
-              @for (bar of monthBars(); track bar.label) {
-                <div class="bar-col">
-                  <div class="bar-value">{{ formatMoney(bar.value) }}</div>
-                  <div class="bar" [class.bar-current]="bar.isCurrent" [style.height.%]="(bar.value / monthMax()) * 100"></div>
-                  <div class="bar-label">{{ bar.label }}</div>
-                </div>
-              }
-            </div>
-          </div>
-        }
-      </div>
+          }
+        </div>
+      }
     </section>
   }
 </div>

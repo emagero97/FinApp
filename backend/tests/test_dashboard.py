@@ -117,6 +117,17 @@ def test_dashboard_category_comparison(client, data):
     assert by_name["Groceries"]["above_average"] is True
 
 
+def test_dashboard_monthly_history_balance(client, data):
+    history = {
+        item["month"]: item["balance"]
+        for item in client.get("/api/dashboard").get_json()["monthly_history"]
+    }
+    # July: 2500 income - 620 expenses; March: 30 expense only; June: nothing
+    assert history["2026-07"] == "1880.00"
+    assert history["2026-03"] == "-30.00"
+    assert history["2026-06"] == "0.00"
+
+
 def test_dashboard_month_comparison(client, data):
     comparison = client.get("/api/dashboard").get_json()["month_comparison"]
     assert comparison["year"] == 2026

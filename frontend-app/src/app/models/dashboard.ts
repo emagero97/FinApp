@@ -36,7 +36,7 @@ export interface MonthComparison {
 
 export interface MonthlyHistoryItem {
   month: string;
-  total: string;
+  balance: string;
 }
 
 export interface DashboardSummary {

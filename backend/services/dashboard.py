@@ -166,16 +166,8 @@ def _monthly_history() -> list[dict]:
     for offset in range(11, -1, -1):
         first = _add_months(today, -offset)
         next_month = _add_months(today, -offset + 1)
-        total = (
-            db.session.query(func.coalesce(func.sum(Transaction.amount), 0))
-            .filter(
-                Transaction.type == "expense",
-                Transaction.date >= first,
-                Transaction.date < next_month,
-            )
-            .scalar()
-        )
-        months.append({"month": _month_key(first), "total": _fmt(total)})
+        totals = _totals(first, next_month)
+        months.append({"month": _month_key(first), "balance": totals["balance"]})
     return months
 
 

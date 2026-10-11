@@ -3,7 +3,9 @@ import { toObservable } from '@angular/core/rxjs-interop';
 import { Observable, catchError, of, switchMap } from 'rxjs';
 import { DashboardService } from '../services/dashboard.service';
 import { SettingsService } from '../services/settings.service';
+import { TransactionService } from '../services/transaction.service';
 import { DashboardSummary, PeriodTotals } from '../models/dashboard';
+import { Transaction, TransactionQuery } from '../models/transaction';
 
 export type PeriodKey = 'week' | 'month' | 'year';
 export type ScopeKey = 'month' | 'year';
@@ -43,6 +45,7 @@ const DONUT_CIRCUMFERENCE = 2 * Math.PI * DONUT_RADIUS;
 })
 export class DashboardPageComponent {
   private readonly service = inject(DashboardService);
+  private readonly transactionService = inject(TransactionService);
   private readonly settings = inject(SettingsService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -52,6 +55,11 @@ export class DashboardPageComponent {
   selectedMonth = signal<string>(this.currentMonthKey());
   recapScope = signal<ScopeKey>('month');
   recapOpen = signal(false);
+  transactionsOpen = signal(false);
+  periodTransactions = signal<Transaction[]>([]);
+  transactionsLoading = signal(true);
+  readonly pageSize = 10;
+  txPage = signal(1);
   readonly periodKeys: PeriodKey[] = ['week', 'month', 'year'];
   readonly scopeKeys: ScopeKey[] = ['month', 'year'];
 
@@ -59,6 +67,17 @@ export class DashboardPageComponent {
     month: this.selectedMonth(),
     scope: this.recapScope(),
   }));
+
+  /** Date range of the transactions matching the current selection. */
+  private readonly transactionRange = computed<TransactionQuery>(() => {
+    const [year, month] = this.selectedMonth().split('-');
+    const from = this.recapScope() === 'year' ? `${year}-01-01` : `${year}-${month}-01`;
+    const lastDay = new Date(Number(year), Number(month), 0).getDate();
+    return {
+      date_from: from,
+      date_to: `${year}-${month}-${String(lastDay).padStart(2, '0')}`,
+    };
+  });
 
   constructor() {
     const sub = toObservable(this.requestParams)
@@ -74,27 +93,80 @@ export class DashboardPageComponent {
         this.summary.set(summary);
         this.loading.set(false);
       });
-    this.destroyRef.onDestroy(() => sub.unsubscribe());
+
+    const txSub = toObservable(this.transactionRange)
+      .pipe(
+        switchMap((range) => {
+          this.transactionsLoading.set(true);
+          return this.transactionService.list(range).pipe(
+            catchError(() => of(null) as Observable<{ transactions: Transaction[]; total: number } | null>)
+          );
+        })
+      )
+      .subscribe((res) => {
+        this.periodTransactions.set(res?.transactions ?? []);
+        this.txPage.set(1);
+        this.transactionsLoading.set(false);
+      });
+
+    this.destroyRef.onDestroy(() => {
+      sub.unsubscribe();
+      txSub.unsubscribe();
+    });
   }
 
   setPeriod(period: PeriodKey): void {
     this.period.set(period);
+    if (period === 'month' || period === 'year') {
+      this.recapScope.set(period);
+    }
   }
 
   setRecapScope(scope: ScopeKey): void {
     this.recapScope.set(scope);
+    this.period.set(scope);
   }
 
   toggleRecap(): void {
     this.recapOpen.update((open) => !open);
   }
 
-  selectMonth(monthKey: string): void {
-    this.selectedMonth.set(monthKey);
+  toggleTransactions(): void {
+    this.transactionsOpen.update((open) => !open);
   }
 
+  pagedTransactions = computed<Transaction[]>(() => {
+    const start = (this.txPage() - 1) * this.pageSize;
+    return this.periodTransactions().slice(start, start + this.pageSize);
+  });
+
+  totalPages = computed(() =>
+    Math.max(1, Math.ceil(this.periodTransactions().length / this.pageSize))
+  );
+
+  setTxPage(page: number): void {
+    this.txPage.set(Math.min(Math.max(1, page), this.totalPages()));
+  }
+
+  selectMonth(monthKey: string): void {
+    this.selectedMonth.set(monthKey);
+    this.period.set('month');
+    this.recapScope.set('month');
+  }
+
+  /**
+   * Top KPIs follow the current selection: the current week while the week
+   * shortcut is active, otherwise the selected month / year-to-date totals.
+   */
   kpis(): PeriodTotals {
-    return this.summary()?.periods[this.period()] ?? EMPTY_PERIOD;
+    if (this.period() === 'week') {
+      return this.summary()?.periods.week ?? EMPTY_PERIOD;
+    }
+    return this.recapTotals();
+  }
+
+  kpiSubtitle(): string {
+    return this.period() === 'week' ? this.t('dash.currentWeek') : this.recapSubtitle();
   }
 
   recapTotals(): PeriodTotals {
@@ -170,13 +242,36 @@ export class DashboardPageComponent {
         monthKey: item.month,
         label: MONTH_NAMES[Number(month) - 1],
         year,
-        value: Number(item.total),
+        value: Number(item.balance),
         isCurrent: item.month === this.selectedMonth(),
       };
     });
   });
 
-  historyMax = computed(() => Math.max(1, ...this.historyBars().map((bar) => bar.value)));
+  /** Scale and zero-baseline used to draw the diverging balance bars. */
+  private readonly historyStats = computed(() => {
+    const values = this.historyBars().map((bar) => bar.value);
+    const maxPositive = Math.max(0, ...values);
+    const maxNegative = Math.max(0, ...values.map((value) => -value));
+    const range = maxPositive + maxNegative;
+    return {
+      scale: range > 0 ? range * 1.15 : 1,
+      zeroPct: range > 0 ? (maxPositive / range) * 100 : 50,
+    };
+  });
+
+  historyZeroPct(): number {
+    return this.historyStats().zeroPct;
+  }
+
+  historyBarHeight(bar: HistoryBar): number {
+    return (Math.abs(bar.value) / this.historyStats().scale) * 100;
+  }
+
+  historyBarTop(bar: HistoryBar): number {
+    const zeroPct = this.historyStats().zeroPct;
+    return bar.value >= 0 ? zeroPct - this.historyBarHeight(bar) : zeroPct;
+  }
 
   private currentMonthKey(): string {
     const now = new Date();

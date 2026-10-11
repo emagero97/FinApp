@@ -3,6 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { of } from 'rxjs';
 import { DashboardPageComponent } from './dashboard-page.component';
 import { DashboardService } from '../services/dashboard.service';
+import { TransactionService } from '../services/transaction.service';
 import { DashboardSummary } from '../models/dashboard';
 
 function sampleSummary(): DashboardSummary {
@@ -36,20 +37,40 @@ function sampleSummary(): DashboardSummary {
       average_previous: '50.00',
     },
     monthly_history: [
-      { month: '2026-07', total: '620.00' },
-      { month: '2026-06', total: '0.00' },
+      { month: '2026-07', balance: '1880.00' },
+      { month: '2026-06', balance: '-30.00' },
     ],
   };
 }
 
 describe('DashboardPageComponent', () => {
   let service: { get: ReturnType<typeof vi.fn> };
+  let transactionService: { list: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
-    service = { get: vi.fn().mockReturnValue(of(sampleSummary())) };
+    const base = sampleSummary();
+    service = {
+      get: vi
+        .fn()
+        .mockImplementation((filters?: { scope?: string }) =>
+          of(
+            filters?.scope === 'year'
+              ? {
+                  ...base,
+                  recap_totals: { income: '2500.00', expenses: '650.00', balance: '1850.00' },
+                }
+              : base
+          )
+        ),
+    };
+    transactionService = { list: vi.fn().mockReturnValue(of({ transactions: [], total: 0 })) };
     TestBed.configureTestingModule({
       imports: [DashboardPageComponent],
-      providers: [provideHttpClient(), { provide: DashboardService, useValue: service }],
+      providers: [
+        provideHttpClient(),
+        { provide: DashboardService, useValue: service },
+        { provide: TransactionService, useValue: transactionService },
+      ],
     });
   });
 
@@ -83,18 +104,15 @@ describe('DashboardPageComponent', () => {
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     expect(fixture.componentInstance.recapOpen()).toBe(false);
-    expect(el.querySelector('.recap-totals-head')).toBeNull();
     expect(el.querySelector('.donut-wrap')).toBeNull();
     expect(el.querySelector('.cmp-list')).toBeNull();
     (el.querySelector('.recap-toggle') as HTMLElement).click();
     fixture.detectChanges();
     expect(fixture.componentInstance.recapOpen()).toBe(true);
-    expect(el.querySelector('.recap-totals-head')).not.toBeNull();
     expect(el.querySelector('.donut-wrap')).not.toBeNull();
     expect(el.querySelector('.cmp-list')).not.toBeNull();
     (el.querySelector('.recap-toggle') as HTMLElement).click();
     fixture.detectChanges();
-    expect(el.querySelector('.recap-totals-head')).toBeNull();
     expect(el.querySelector('.donut-wrap')).toBeNull();
   });
 
@@ -216,5 +234,91 @@ describe('DashboardPageComponent', () => {
     component.setRecapScope('year');
     fixture.detectChanges();
     expect(component.recapSubtitle()).toBe('Year to date');
+  });
+
+  it('should load transactions for the selected month', () => {
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.selectMonth('2026-06');
+    fixture.detectChanges();
+    expect(transactionService.list).toHaveBeenLastCalledWith({
+      date_from: '2026-06-01',
+      date_to: '2026-06-30',
+    });
+  });
+
+  it('should load transactions from the start of the year when the scope is year', () => {
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.setRecapScope('year');
+    fixture.detectChanges();
+    expect(transactionService.list).toHaveBeenLastCalledWith({
+      date_from: `${component.selectedMonth().slice(0, 4)}-01-01`,
+      date_to: expect.stringContaining(component.selectedMonth()),
+    });
+  });
+
+  it('should hide the transactions panel by default and reveal it on toggle', () => {
+    transactionService.list.mockReturnValue(
+      of({
+        transactions: [
+          {
+            id: 1,
+            type: 'expense',
+            category_id: 1,
+            category_name: 'Food',
+            amount: '12.50',
+            date: '2026-07-10',
+            notes: null,
+            created_at: '2026-07-10T00:00:00',
+            updated_at: '2026-07-10T00:00:00',
+          },
+        ],
+        total: 1,
+      })
+    );
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    const el = fixture.nativeElement as HTMLElement;
+    expect(component.transactionsOpen()).toBe(false);
+    expect(el.querySelector('.view-transactions')).toBeNull();
+    const toggles = el.querySelectorAll('.recap-toggle');
+    (toggles[toggles.length - 1] as HTMLElement).click();
+    fixture.detectChanges();
+    expect(component.transactionsOpen()).toBe(true);
+    const section = el.querySelector('.view-transactions');
+    expect(section?.textContent).toContain('Food');
+    expect(section?.textContent).toContain('12.50');
+  });
+
+  it('should paginate the period transactions', () => {
+    const transactions = Array.from({ length: 25 }, (_, index) => ({
+      id: index + 1,
+      type: 'expense' as const,
+      category_id: 1,
+      category_name: 'Food',
+      amount: '12.50',
+      date: '2026-07-10',
+      notes: null,
+      created_at: '2026-07-10T00:00:00',
+      updated_at: '2026-07-10T00:00:00',
+    }));
+    transactionService.list.mockReturnValue(of({ transactions, total: transactions.length }));
+    const fixture = TestBed.createComponent(DashboardPageComponent);
+    fixture.detectChanges();
+    const component = fixture.componentInstance;
+    component.toggleTransactions();
+    fixture.detectChanges();
+    expect(component.pagedTransactions()).toHaveLength(10);
+    expect(component.totalPages()).toBe(3);
+    expect(component.txPage()).toBe(1);
+    component.setTxPage(3);
+    fixture.detectChanges();
+    expect(component.pagedTransactions()).toHaveLength(5);
+    component.setTxPage(99);
+    expect(component.txPage()).toBe(3);
   });
 });

@@ -267,11 +267,16 @@ select:focus {
   white-space: nowrap;
 }
 
-.table td.actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
+.table td.date-col {
   white-space: nowrap;
+}
+
+.table td.actions {
+  white-space: nowrap;
+}
+
+.table td.actions .btn + .btn {
+  margin-left: 0.45rem;
 }
 
 .badge {

@@ -197,7 +197,7 @@
             @if (deleteMode()) {
               <th class="select-col"></th>
             }
-            <th>{{ t('tx.date') }}</th>
+            <th class="date-col">{{ t('tx.date') }}</th>
             <th>{{ t('tx.type') }}</th>
             <th>{{ t('tx.category') }}</th>
             <th class="num">{{ t('tx.amount') }}</th>
@@ -220,7 +220,7 @@
                   />
                 </td>
               }
-              <td>{{ transaction.date }}</td>
+              <td class="date-col">{{ transaction.date }}</td>
               <td>
                 <span class="badge" [class.badge-income]="transaction.type === 'income'">
                   {{ transaction.type === 'income' ? t('cat.income') : t('cat.expense') }}
